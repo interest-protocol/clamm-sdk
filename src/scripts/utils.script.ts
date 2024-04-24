@@ -8,7 +8,7 @@ import { CLAMM as CLAMM_ } from '../clamm';
 import dotenv from 'dotenv';
 import invariant from 'tiny-invariant';
 import { bcs } from '@mysten/sui.js/bcs';
-import * as template from './move_bytecode_template.js';
+import * as template from './template/move_bytecode_template.js';
 import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui.js/utils';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { OwnedObjectRef } from '@mysten/sui.js/client';

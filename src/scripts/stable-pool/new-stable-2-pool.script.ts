@@ -7,7 +7,7 @@ import {
   CLAMM,
   executeTx,
   sleep,
-} from './utils.script';
+} from '../utils.script';
 
 (async () => {
   try {
