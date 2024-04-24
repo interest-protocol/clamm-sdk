@@ -12,11 +12,11 @@ import {
 } from './clamm.types';
 import { SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
 
-const FUNCTION_NAME_MAP = {
-  3: ' new_2_pool',
-  4: ' new_3_pool',
-  5: ' new_4_pool',
-  6: ' new_5_pool',
+const NEW_POOL_FUNCTION_NAME_MAP = {
+  3: 'new_2_pool',
+  4: 'new_3_pool',
+  5: 'new_4_pool',
+  6: 'new_5_pool',
 } as Record<number, string>;
 
 export class CLAMM {
@@ -59,6 +59,7 @@ export class CLAMM {
       typeArguments: [this.stableType],
       arguments: [pool],
     });
+    return txb;
   }
 
   shareVolatilePool({ txb, pool }: SharePoolArgs) {
@@ -67,6 +68,7 @@ export class CLAMM {
       typeArguments: [this.volatileType],
       arguments: [pool],
     });
+    return txb;
   }
 
   async newStable({
@@ -77,11 +79,11 @@ export class CLAMM {
     typeArguments,
   }: ClammNewStableArgs): Promise<ClammNewPoolReturn> {
     invariant(
-      typeArguments.length === coins.length + 1 && typeArguments.length != 0,
+      typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
       'Type arguments and coin mismatch',
     );
-    const txb = _txb ? _txb : new TransactionBlock();
-    const a = _a ? _a : this.#stableA;
+    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
+    const a = this.#valueOrDefault(_a, this.#stableA);
 
     const supply = this.#treasuryIntoSupply(
       txb,
@@ -95,7 +97,7 @@ export class CLAMM {
     );
 
     const [pool, poolAdmin, lpCoin] = txb.moveCall({
-      target: `${this.#package}::${this.#stableModule}::${FUNCTION_NAME_MAP[typeArguments.length]}`,
+      target: `${this.#package}::${this.#stableModule}::${NEW_POOL_FUNCTION_NAME_MAP[typeArguments.length]}`,
       typeArguments,
       arguments: [
         txb.object(SUI_CLOCK_OBJECT_ID),
@@ -106,26 +108,18 @@ export class CLAMM {
       ],
     });
 
-    txb.moveCall({
-      target: `${this.#suiTears}::coin_decimals::destroy`,
-      arguments: [coinDecimals, cap],
-    });
-
-    txb.moveCall({
-      target: `${this.#suiTears}::owner::destroy`,
-      typeArguments: [`${this.#suiTears}::coin_decimals::CoinDecimalsWitness`],
-      arguments: [cap],
-    });
+    txb = this.#destroyCoinDecimalsAndCap(txb, coinDecimals, cap);
 
     return {
       pool,
       poolAdmin,
       lpCoin,
+      txb,
     };
   }
 
   async newVolatile({
-    txb,
+    txb: _txb,
     coins,
     typeArguments,
     lpCoinTreasuryCap,
@@ -137,19 +131,61 @@ export class CLAMM {
     midFee: _midFee,
     outFee: _outFee,
     gammaFee: _gammaFee,
+    prices,
   }: ClammNewVolatileArgs): Promise<ClammNewPoolReturn> {
-    const a = _a ? _a : this.#volatileA;
-    const gamma = _gamma ? _gamma : this.#gamma;
-    const extraProfit = _extraProfit ? _extraProfit : this.#extraProfit;
-    const adjustmentStep = _adjustmentStep
-      ? _adjustmentStep
-      : this.#adjustmentStep;
-    const outFee = _outFee ? _outFee : this.#outFee;
-    const midFee = _midFee ? _midFee : this.#midFee;
-    const gammaFee = _gammaFee ? _gammaFee : this.#gammaFee;
+    invariant(
+      typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
+      'Type arguments and coin mismatch',
+    );
+    invariant(prices.length > 0, 'You must provide prices');
 
-    // TODO
-    throw new Error('');
+    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
+    const a = this.#valueOrDefault(_a, this.#volatileA);
+    const gamma = this.#valueOrDefault(_gamma, this.#gamma);
+    const extraProfit = this.#valueOrDefault(_extraProfit, this.#extraProfit);
+    const adjustmentStep = this.#valueOrDefault(
+      _adjustmentStep,
+      this.#adjustmentStep,
+    );
+    const outFee = this.#valueOrDefault(_outFee, this.#outFee);
+    const midFee = this.#valueOrDefault(_midFee, this.#midFee);
+    const gammaFee = this.#valueOrDefault(_gammaFee, this.#gammaFee);
+    const maHalfTime = this.#valueOrDefault(_maHalfTime, this.#maHalfTime);
+
+    const supply = this.#treasuryIntoSupply(
+      txb,
+      typeArguments.slice(-1)[0],
+      lpCoinTreasuryCap,
+    );
+
+    const [coinDecimals, cap] = await this.#handleCoinDecimals(
+      txb,
+      typeArguments,
+    );
+
+    const [pool, poolAdmin, lpCoin] = txb.moveCall({
+      target: `${this.#package}::${this.#volatileModule}::${NEW_POOL_FUNCTION_NAME_MAP[typeArguments.length]}`,
+      typeArguments,
+      arguments: [
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        coinDecimals,
+        ...coins.map(x => this.#object(txb, x)),
+        supply,
+        txb.pure([a, gamma]),
+        txb.pure([extraProfit, adjustmentStep, maHalfTime]),
+        txb.pure(typeArguments.length === 3 ? prices[0] : prices),
+        txb.pure([midFee, outFee, gammaFee]),
+      ],
+    });
+
+    txb = this.#destroyCoinDecimalsAndCap(txb, coinDecimals, cap);
+
+    return {
+      pool,
+      poolAdmin,
+      lpCoin,
+      txb,
+    };
   }
 
   async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {
@@ -186,6 +222,10 @@ export class CLAMM {
     return [coinDecimals, cap];
   }
 
+  #valueOrDefault<T>(x: T | null | undefined, y: T) {
+    return x ? x : y;
+  }
+
   #treasuryIntoSupply(
     txb: TransactionBlock,
     type: string,
@@ -196,6 +236,25 @@ export class CLAMM {
       typeArguments: [type],
       arguments: [this.#object(txb, lpCoinTreasuryCap)],
     });
+  }
+
+  #destroyCoinDecimalsAndCap(
+    txb: TransactionBlock,
+    coinDecimals: TransactionObjectArgument,
+    cap: TransactionObjectArgument,
+  ) {
+    txb.moveCall({
+      target: `${this.#suiTears}::coin_decimals::destroy`,
+      arguments: [coinDecimals, cap],
+    });
+
+    txb.moveCall({
+      target: `${this.#suiTears}::owner::destroy`,
+      typeArguments: [`${this.#suiTears}::coin_decimals::CoinDecimalsWitness`],
+      arguments: [cap],
+    });
+
+    return txb;
   }
 
   #object(txb: TransactionBlock, id: string | TransactionObjectArgument) {

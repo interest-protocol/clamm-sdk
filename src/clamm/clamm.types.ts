@@ -27,6 +27,7 @@ export interface ClammNewVolatileArgs extends MoveCall {
   midFee?: bigint;
   outFee?: bigint;
   gammaFee?: bigint;
+  prices: bigint[];
 }
 
 export interface SharePoolArgs {
@@ -50,4 +51,12 @@ export interface ClammNewPoolReturn {
     TransactionArgument,
     { index: number; resultIndex: number; kind: 'NestedResult' }
   >;
+  txb: TransactionBlock;
+}
+
+export interface SwapArgs extends MoveCall {
+  coinInType: string;
+  coinOutType: string;
+  coinIn: string | TransactionObjectArgument;
+  minAmount?: bigint;
 }
