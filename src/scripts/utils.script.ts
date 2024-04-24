@@ -263,3 +263,5 @@ export const log = (x: any) => console.log(util.inspect(x, false, null, true));
 
 export const sleep = async (ms = 0) =>
   new Promise(resolve => setTimeout(resolve, ms));
+
+export const PRECISION = 1000000000000000000n;

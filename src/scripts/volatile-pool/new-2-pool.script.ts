@@ -7,13 +7,14 @@ import {
   CLAMM,
   executeTx,
   sleep,
+  PRECISION,
 } from '../utils.script';
 
 (async () => {
   try {
     const lpCoinData = await createLPCoin({
-      name: 'iUSDC/USDT',
-      symbol: 'ipx-s-usdc-usdt',
+      name: 'BTC/USDT',
+      symbol: 'ipx-v-btc-usdt',
       decimals: 9,
       totalSupply: 0n,
       imageUrl: 'https://www.interestprotocol.com/',
@@ -27,7 +28,7 @@ import {
       name: 'USD Coin',
       symbol: 'USDC',
       decimals: 6,
-      totalSupply: 6_000_000n,
+      totalSupply: 6_500_000n,
       imageUrl:
         'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdc.png/public',
       recipient: keypair.toSuiAddress(),
@@ -36,13 +37,13 @@ import {
 
     await sleep(3000);
 
-    const usdtData = await createCoin({
-      name: 'USD Tether',
-      symbol: 'USDT',
+    const btcData = await createCoin({
+      name: 'Bitcoin',
+      symbol: 'BTC',
       decimals: 9,
-      totalSupply: 6_000_000n,
+      totalSupply: 100n,
       imageUrl:
-        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdt.png/public',
+        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/wbtc.png/public',
       recipient: keypair.toSuiAddress(),
       description: 'First crypto ever',
     });
@@ -52,23 +53,20 @@ import {
       'LpCoin Cap not found',
     );
     invariant(usdcData.coin && usdcData.coinType, 'Failed to create USDC');
-    invariant(usdtData.coin && usdtData.coinType, 'Failed to create BTC');
+    invariant(btcData.coin && btcData.coinType, 'Failed to create BTC');
 
     await sleep(3000);
 
-    let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newStable({
-      coins: [usdcData.coin, usdtData.coin],
+    let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newVolatile({
+      coins: [usdcData.coin, btcData.coin],
       lpCoinTreasuryCap: lpCoinData.treasuryCap,
-      typeArguments: [
-        usdcData.coinType,
-        usdtData.coinType,
-        lpCoinData.coinType,
-      ],
+      typeArguments: [usdcData.coinType, btcData.coinType, lpCoinData.coinType],
+      prices: [65_000n * PRECISION],
     });
 
     txb.transferObjects([poolAdmin, lpCoin], txb.pure(keypair.toSuiAddress()));
 
-    txb = CLAMM.shareStablePool({ txb, pool });
+    txb = CLAMM.shareVolatilePool({ txb, pool });
 
     const result = await executeTx(txb);
 
