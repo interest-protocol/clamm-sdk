@@ -3,7 +3,7 @@ import {
   TransactionObjectArgument,
 } from '@mysten/sui.js/transactions';
 import invariant from 'tiny-invariant';
-import { SuiClient } from '@mysten/sui.js/client';
+import { CoinMetadata, SuiClient } from '@mysten/sui.js/client';
 import {
   ClammNewStableArgs,
   ClammNewPoolReturn,
@@ -124,15 +124,6 @@ export class CLAMM {
     };
   }
 
-  // #VolatileA = 400000n;
-  // #Gamme = 145000000000000n;
-  // #extraProfit = 2000000000000n;
-  // #adjustmentStep = 146000000000000n;
-  // #maHalfTime = 600_000n; // 10 minutes
-  // #midFee = 26000000n;
-  // #outFee = 45000000n;
-  // #gammaFee = 230000000000000n;
-
   async newVolatile({
     txb,
     coins,
@@ -173,15 +164,21 @@ export class CLAMM {
           arguments: [cap],
         });
 
-    typeArguments.forEach(async coinType => {
-      const metadata = await this.#client.getCoinMetadata({ coinType });
+    const promises: Promise<CoinMetadata | null>[] = [];
 
+    typeArguments.forEach(async coinType => {
+      promises.push(this.#client.getCoinMetadata({ coinType }));
+    });
+
+    const metadatas = await Promise.all(promises);
+
+    metadatas.forEach((metadata, index) => {
       invariant(metadata, 'Coin must have a metadata');
       invariant(metadata.id, 'Metadata does not have an id');
 
-      return txb.moveCall({
+      txb.moveCall({
         target: `${this.#suiTears}::coin_decimals::add`,
-        typeArguments: [coinType],
+        typeArguments: [typeArguments[index]],
         arguments: [coinDecimals, txb.object(metadata.id)],
       });
     });
