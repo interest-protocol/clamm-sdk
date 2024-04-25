@@ -4,21 +4,28 @@ import {
   TransactionObjectArgument,
 } from '@mysten/sui.js/transactions';
 
-interface MoveCall {
+interface MaybeTxb {
   txb?: TransactionBlock;
 }
 
-export interface ClammNewStableArgs extends MoveCall {
+export type MoveObjectArgument = string | TransactionObjectArgument;
+
+export type TransactionNestedResult = Extract<
+  TransactionArgument,
+  { index: number; resultIndex: number; kind: 'NestedResult' }
+>;
+
+export interface ClammNewStableArgs extends MaybeTxb {
   typeArguments: string[];
-  coins: string[] | TransactionObjectArgument[];
-  lpCoinTreasuryCap: string | TransactionObjectArgument;
+  coins: MoveObjectArgument[];
+  lpCoinTreasuryCap: MoveObjectArgument;
   a?: bigint;
 }
 
-export interface ClammNewVolatileArgs extends MoveCall {
+export interface ClammNewVolatileArgs extends MaybeTxb {
   typeArguments: string[];
-  coins: string[] | TransactionObjectArgument[];
-  lpCoinTreasuryCap: string | TransactionObjectArgument;
+  coins: MoveObjectArgument[];
+  lpCoinTreasuryCap: MoveObjectArgument;
   a?: bigint;
   gamma?: bigint;
   extraProfit?: bigint;
@@ -32,31 +39,24 @@ export interface ClammNewVolatileArgs extends MoveCall {
 
 export interface SharePoolArgs {
   txb: TransactionBlock;
-  pool: Extract<
-    TransactionArgument,
-    { index: number; resultIndex: number; kind: 'NestedResult' }
-  >;
+  pool: TransactionNestedResult;
 }
 
 export interface ClammNewPoolReturn {
-  pool: Extract<
-    TransactionArgument,
-    { index: number; resultIndex: number; kind: 'NestedResult' }
-  >;
-  poolAdmin: Extract<
-    TransactionArgument,
-    { index: number; resultIndex: number; kind: 'NestedResult' }
-  >;
-  lpCoin: Extract<
-    TransactionArgument,
-    { index: number; resultIndex: number; kind: 'NestedResult' }
-  >;
   txb: TransactionBlock;
+  pool: TransactionNestedResult;
+  poolAdmin: TransactionNestedResult;
+  lpCoin: TransactionNestedResult;
 }
 
-export interface SwapArgs extends MoveCall {
+export interface AddLiquidityArgs extends MaybeTxb {
+  poolObjectId: string;
+  minAmount: bigint;
+}
+
+export interface SwapArgs extends MaybeTxb {
   coinInType: string;
   coinOutType: string;
-  coinIn: string | TransactionObjectArgument;
+  coinIn: MoveObjectArgument;
   minAmount?: bigint;
 }

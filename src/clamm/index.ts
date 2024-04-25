@@ -1,23 +1,20 @@
 import {
   TransactionBlock,
   TransactionObjectArgument,
+  TransactionResult,
 } from '@mysten/sui.js/transactions';
 import invariant from 'tiny-invariant';
-import { CoinMetadata, SuiClient } from '@mysten/sui.js/client';
+import { SuiClient } from '@mysten/sui.js/client';
 import {
   ClammNewStableArgs,
   ClammNewPoolReturn,
   ClammNewVolatileArgs,
   SharePoolArgs,
+  AddLiquidityArgs,
 } from './clamm.types';
 import { SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
-
-const NEW_POOL_FUNCTION_NAME_MAP = {
-  3: 'new_2_pool',
-  4: 'new_3_pool',
-  5: 'new_4_pool',
-  6: 'new_5_pool',
-} as Record<number, string>;
+import { NEW_POOL_FUNCTION_NAME_MAP } from './constants';
+import { getCoinMetas } from '@polymedia/coinmeta';
 
 export class CLAMM {
   #client: SuiClient;
@@ -188,6 +185,18 @@ export class CLAMM {
     };
   }
 
+  async addLiquidity({
+    poolObjectId,
+    minAmount,
+  }: AddLiquidityArgs): Promise<TransactionResult> {
+    const pool = await this.#client.getObject({
+      id: poolObjectId,
+      options: { showContent: true, showType: true },
+    });
+    console.log(pool);
+    throw new Error('');
+  }
+
   async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {
     const cap = txb.moveCall({
       target: `${this.#suiTears}::coin_decimals::new_cap`,
@@ -200,15 +209,10 @@ export class CLAMM {
           arguments: [cap],
         });
 
-    const promises: Promise<CoinMetadata | null>[] = [];
+    const metadataMap = await getCoinMetas(this.#client, typeArguments);
 
-    typeArguments.forEach(async coinType => {
-      promises.push(this.#client.getCoinMetadata({ coinType }));
-    });
-
-    const metadatas = await Promise.all(promises);
-
-    metadatas.forEach((metadata, index) => {
+    typeArguments.forEach((coinType, index) => {
+      const metadata = metadataMap.get(coinType);
       invariant(metadata, 'Coin must have a metadata');
       invariant(metadata.id, 'Metadata does not have an id');
 

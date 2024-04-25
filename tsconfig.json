@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["esnext", "ES2023", "esnext.string"],
+    "lib": ["esnext", "dom", "ES2023", "esnext.string"],
     // output .d.ts declaration files for consumers
     "declaration": true,
     "emitDeclarationOnly": true,

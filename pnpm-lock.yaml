@@ -8,6 +8,9 @@ dependencies:
   '@mysten/sui.js':
     specifier: ^0.51.2
     version: 0.51.2(svelte@4.2.15)(typescript@5.4.5)
+  '@polymedia/coinmeta':
+    specifier: ^0.0.1
+    version: 0.0.1
   ramda:
     specifier: ^0.29.1
     version: 0.29.1
@@ -753,6 +756,10 @@ packages:
     resolution: {integrity: sha512-cq8o4cWH0ibXh9VGi5P20Tu9XF/0fFXl9EUinr9QfTM7a7p0oTA4iJRCQWppXR1Pg8dSM0UCItCkPwsk9qWWYA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
     dev: true
+
+  /@polymedia/coinmeta@0.0.1:
+    resolution: {integrity: sha512-1rn/0F80CkjuCVPL2u5PClUhWyffTbspxcKKf+D+jRFo9Xi+Sls0Vw+6VZZrewZiTHDK6e+nz773tYDqWERdaw==}
+    dev: false
 
   /@rollup/rollup-android-arm-eabi@4.16.4:
     resolution: {integrity: sha512-GkhjAaQ8oUTOKE4g4gsZ0u8K/IHU1+2WQSgS1TwTcYvL+sjbaQjNHFXbOJ6kgqGHIO1DfUhI/Sphi9GkRT9K+Q==}
