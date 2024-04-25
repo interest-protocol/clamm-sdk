@@ -11,10 +11,21 @@ import {
   ClammNewVolatileArgs,
   SharePoolArgs,
   AddLiquidityArgs,
+  Pool,
+  StablePool,
+  VolatilePool,
 } from './clamm.types';
-import { SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
+import { SUI_CLOCK_OBJECT_ID, isValidSuiObjectId } from '@mysten/sui.js/utils';
 import { NEW_POOL_FUNCTION_NAME_MAP } from './constants';
-import { getCoinMetas } from '@polymedia/coinmeta';
+import {
+  getCoinMetas,
+  parseStableV1State,
+  parseVolatileV1State,
+  createCoinStateMap,
+  normalizeSuiCoinType,
+} from './utils';
+import { pathOr } from 'ramda';
+import { MoveStruct } from '@mysten/sui.js/client';
 
 export class CLAMM {
   #client: SuiClient;
@@ -185,15 +196,108 @@ export class CLAMM {
     };
   }
 
+  async getPool(id: string): Promise<Pool> {
+    invariant(isValidSuiObjectId(id), 'Invalid pool object id');
+    const pool = await this.#client.getObject({
+      id,
+      options: { showContent: true, showType: true },
+    });
+
+    invariant(
+      pool.data && pool.data.type && pool.data.content,
+      'Pool not found',
+    );
+
+    const poolObjectId = pool.data.objectId;
+    const isStable = pool.data.type.includes('curves::Stable');
+    const coinTypes = pathOr(
+      [] as MoveStruct[],
+      ['fields', 'coins', 'fields', 'contents'],
+      pool.data.content,
+    ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
+    const stateVersionedId = pathOr(
+      '',
+      ['fields', 'state', 'fields', 'id', 'id'],
+      pool.data.content,
+    );
+    const poolAdminAddress = pathOr(
+      '',
+      ['fields', 'pool_admin_address'],
+      pool.data.content,
+    );
+
+    invariant(stateVersionedId, 'State Versioned id not found');
+
+    const poolDyanmicFields = await this.#client.getDynamicFields({
+      parentId: stateVersionedId,
+    });
+
+    const stateId = poolDyanmicFields.data[0].objectId;
+
+    const poolState = await this.#client.getObject({
+      id: stateId,
+      options: { showContent: true, showType: true },
+    });
+
+    invariant(
+      poolState.data &&
+        poolState.data.content &&
+        poolState.data.content.dataType === 'moveObject',
+      'PoolState data not found',
+    );
+
+    if (isStable) {
+      const { lpCoinType, state } = parseStableV1State(
+        poolState.data.content.fields,
+      );
+      return {
+        poolAdminAddress,
+        poolObjectId,
+        coinTypes,
+        state,
+        lpCoinType,
+        isStable,
+        stateId,
+      } as StablePool;
+    }
+
+    const { lpCoinType, state, coinStatesId } = parseVolatileV1State(
+      poolState.data.content.fields,
+    );
+
+    const coinStatesFields = await this.#client.getDynamicFields({
+      parentId: coinStatesId,
+    });
+
+    const coinStates = await this.#client.multiGetObjects({
+      ids: coinStatesFields.data.map(x => x.objectId),
+      options: {
+        showContent: true,
+      },
+    });
+
+    return {
+      poolAdminAddress,
+      poolObjectId,
+      coinTypes,
+      state: {
+        ...state,
+        coinStateMap: createCoinStateMap(coinStates),
+      },
+      lpCoinType,
+      isStable,
+      stateId,
+    } as VolatilePool;
+  }
+
   async addLiquidity({
     poolObjectId,
     minAmount,
   }: AddLiquidityArgs): Promise<TransactionResult> {
-    const pool = await this.#client.getObject({
-      id: poolObjectId,
-      options: { showContent: true, showType: true },
+    console.log({
+      poolObjectId,
+      minAmount,
     });
-    console.log(pool);
     throw new Error('');
   }
 

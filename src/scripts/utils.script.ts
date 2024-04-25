@@ -265,3 +265,9 @@ export const sleep = async (ms = 0) =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 export const PRECISION = 1000000000000000000n;
+
+export const STABLE_POOL_USDC_USDT_OBJECT_ID =
+  '0xaba1ea8dd79da0236001f91a46e35c624630c9063fbb837483613aec44a15288';
+
+export const VOLATILE_POOL_USDC_BTC_OBJECT_ID =
+  '0x0f576fec03e56e7c9d0d1e2563a8fadb12e02cb55be80b7afa4e6d542b15472a';

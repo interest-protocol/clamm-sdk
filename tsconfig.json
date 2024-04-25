@@ -33,7 +33,7 @@
     "composite": true,
     "baseUrl": "." /* Skip type checking all .d.ts files. */
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/clamm/data/metadata.json"],
   "exclude": [
     "src/**/*.script.ts",
     "src/scripts/move-bytecode-template.js",
