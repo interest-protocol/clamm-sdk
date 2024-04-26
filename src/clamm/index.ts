@@ -90,7 +90,7 @@ export class CLAMM {
 
   async newStable({
     txb = new TransactionBlock(),
-    a: _a,
+    a = this.#stableA,
     lpCoinTreasuryCap,
     coins,
     typeArguments,
@@ -99,7 +99,6 @@ export class CLAMM {
       typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
       'Type arguments and coin mismatch',
     );
-    const a = this.#valueOrDefault(_a, this.#stableA);
 
     const supply = this.#treasuryIntoSupply(
       txb,
@@ -139,14 +138,14 @@ export class CLAMM {
     coins,
     typeArguments,
     lpCoinTreasuryCap,
-    a: _a,
-    gamma: _gamma,
-    extraProfit: _extraProfit,
-    adjustmentStep: _adjustmentStep,
-    maHalfTime: _maHalfTime,
-    midFee: _midFee,
-    outFee: _outFee,
-    gammaFee: _gammaFee,
+    a = this.#volatileA,
+    gamma = this.#gamma,
+    extraProfit = this.#extraProfit,
+    adjustmentStep = this.#adjustmentStep,
+    maHalfTime = this.#maHalfTime,
+    midFee = this.#midFee,
+    outFee = this.#outFee,
+    gammaFee = this.#gammaFee,
     prices,
   }: NewVolatileArgs): Promise<NewPoolReturn> {
     invariant(
@@ -154,18 +153,6 @@ export class CLAMM {
       'Type arguments and coin mismatch',
     );
     invariant(prices.length > 0, 'You must provide prices');
-
-    const a = this.#valueOrDefault(_a, this.#volatileA);
-    const gamma = this.#valueOrDefault(_gamma, this.#gamma);
-    const extraProfit = this.#valueOrDefault(_extraProfit, this.#extraProfit);
-    const adjustmentStep = this.#valueOrDefault(
-      _adjustmentStep,
-      this.#adjustmentStep,
-    );
-    const outFee = this.#valueOrDefault(_outFee, this.#outFee);
-    const midFee = this.#valueOrDefault(_midFee, this.#midFee);
-    const gammaFee = this.#valueOrDefault(_gammaFee, this.#gammaFee);
-    const maHalfTime = this.#valueOrDefault(_maHalfTime, this.#maHalfTime);
 
     const supply = this.#treasuryIntoSupply(
       txb,
@@ -460,10 +447,6 @@ export class CLAMM {
     });
 
     return [coinDecimals, cap];
-  }
-
-  #valueOrDefault<T>(x: T | null | undefined, y: T) {
-    return x ? x : y;
   }
 
   #treasuryIntoSupply(
