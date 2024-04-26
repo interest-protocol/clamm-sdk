@@ -1,22 +1,23 @@
+import { bcs } from '@mysten/sui.js/bcs';
 import {
   getFullnodeUrl,
   SuiClient,
   SuiObjectResponse,
 } from '@mysten/sui.js/client';
+import { OwnedObjectRef } from '@mysten/sui.js/client';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
-import { CLAMM as CLAMM_ } from '../clamm';
-import dotenv from 'dotenv';
-import invariant from 'tiny-invariant';
-import { bcs } from '@mysten/sui.js/bcs';
-import * as template from './template/move_bytecode_template.js';
-import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui.js/utils';
 import {
   TransactionBlock,
   TransactionResult,
 } from '@mysten/sui.js/transactions';
-import { OwnedObjectRef } from '@mysten/sui.js/client';
-import util from 'util';
+import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui.js/utils';
+import dotenv from 'dotenv';
 import { pathOr } from 'ramda';
+import invariant from 'tiny-invariant';
+import util from 'util';
+
+import { CLAMM as CLAMM_ } from '../clamm';
+import * as template from './template/move_bytecode_template.js';
 
 dotenv.config();
 
@@ -144,8 +145,8 @@ const getLpCoinBytecode = (info: GetByteCodeArgs) => {
   const templateByteCode = fromHEX(getLpCoinTemplateByteCode());
 
   const modifiedByteCode = template.update_identifiers(templateByteCode, {
-    LP_COIN: (info.symbol.toUpperCase() as any).replaceAll('-', '_'),
-    lp_coin: (info.symbol.toLowerCase() as any).replaceAll('-', '_'),
+    LP_COIN: info.symbol.toUpperCase().replaceAll('-', '_'),
+    lp_coin: info.symbol.toLowerCase().replaceAll('-', '_'),
   });
 
   let updated = updateDecimals(modifiedByteCode, 9);
@@ -265,7 +266,8 @@ export const createLPCoin = async (info: GetByteCodeArgs) => {
   return extractCoinData(result || []);
 };
 
-export const log = (x: any) => console.log(util.inspect(x, false, null, true));
+export const log = (x: unknown) =>
+  console.log(util.inspect(x, false, null, true));
 
 export const sleep = async (ms = 0) =>
   new Promise(resolve => setTimeout(resolve, ms));

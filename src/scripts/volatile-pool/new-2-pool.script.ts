@@ -1,13 +1,14 @@
 import invariant from 'tiny-invariant';
+
 import {
-  keypair,
+  CLAMM,
   createCoin,
   createLPCoin,
-  log,
-  CLAMM,
   executeTx,
-  sleep,
+  keypair,
+  log,
   PRECISION,
+  sleep,
 } from '../utils.script';
 
 (async () => {

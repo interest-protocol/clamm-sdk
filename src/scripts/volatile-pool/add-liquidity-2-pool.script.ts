@@ -1,19 +1,20 @@
 import { TransactionBlock } from '@mysten/sui.js/transactions';
+
 import {
   CLAMM,
-  VOLATILE_POOL_USDC_BTC_OBJECT_ID,
-  VOLATILE_POOL_BTC_TREASURY_CAP,
-  VOLATILE_POOL_USDC_TREASURY_CAP,
-  keypair,
   executeTx,
+  keypair,
   log,
+  VOLATILE_POOL_BTC_TREASURY_CAP,
+  VOLATILE_POOL_USDC_BTC_OBJECT_ID,
+  VOLATILE_POOL_USDC_TREASURY_CAP,
 } from '../utils.script';
 
 (async () => {
   try {
     const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_BTC_OBJECT_ID);
 
-    let initTxb = new TransactionBlock();
+    const initTxb = new TransactionBlock();
 
     // USDC has 6 decimals
     const coinA = initTxb.moveCall({

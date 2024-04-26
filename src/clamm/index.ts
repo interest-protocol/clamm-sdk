@@ -1,34 +1,38 @@
+import { SuiClient } from '@mysten/sui.js/client';
+import { MoveStruct } from '@mysten/sui.js/client';
 import {
   TransactionBlock,
   TransactionObjectArgument,
 } from '@mysten/sui.js/transactions';
+import { isValidSuiObjectId, SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
+import { pathOr } from 'ramda';
 import invariant from 'tiny-invariant';
-import { SuiClient } from '@mysten/sui.js/client';
+
 import {
-  ClammNewStableArgs,
-  ClammNewPoolReturn,
-  ClammNewVolatileArgs,
-  SharePoolArgs,
   AddLiquidityArgs,
+  AddLiquidityReturn,
+  NewPoolReturn,
+  NewStableArgs,
+  NewVolatileArgs,
   InterestPool,
+  SharePoolArgs,
   StablePool,
   VolatilePool,
-  AddLiquidityReturn,
+  RemoveLiquidityArgs,
+  RemoveLiquidityReturn,
 } from './clamm.types';
-import { SUI_CLOCK_OBJECT_ID, isValidSuiObjectId } from '@mysten/sui.js/utils';
 import {
-  NEW_POOL_FUNCTION_NAME_MAP,
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
+  REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
+  NEW_POOL_FUNCTION_NAME_MAP,
 } from './constants';
 import {
+  createCoinStateMap,
   getCoinMetas,
+  normalizeSuiCoinType,
   parseStableV1State,
   parseVolatileV1State,
-  createCoinStateMap,
-  normalizeSuiCoinType,
 } from './utils';
-import { pathOr } from 'ramda';
-import { MoveStruct } from '@mysten/sui.js/client';
 
 export class CLAMM {
   #client: SuiClient;
@@ -83,17 +87,16 @@ export class CLAMM {
   }
 
   async newStable({
-    txb: _txb,
+    txb = new TransactionBlock(),
     a: _a,
     lpCoinTreasuryCap,
     coins,
     typeArguments,
-  }: ClammNewStableArgs): Promise<ClammNewPoolReturn> {
+  }: NewStableArgs): Promise<NewPoolReturn> {
     invariant(
       typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
       'Type arguments and coin mismatch',
     );
-    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
     const a = this.#valueOrDefault(_a, this.#stableA);
 
     const supply = this.#treasuryIntoSupply(
@@ -130,7 +133,7 @@ export class CLAMM {
   }
 
   async newVolatile({
-    txb: _txb,
+    txb = new TransactionBlock(),
     coins,
     typeArguments,
     lpCoinTreasuryCap,
@@ -143,14 +146,13 @@ export class CLAMM {
     outFee: _outFee,
     gammaFee: _gammaFee,
     prices,
-  }: ClammNewVolatileArgs): Promise<ClammNewPoolReturn> {
+  }: NewVolatileArgs): Promise<NewPoolReturn> {
     invariant(
       typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
       'Type arguments and coin mismatch',
     );
     invariant(prices.length > 0, 'You must provide prices');
 
-    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
     const a = this.#valueOrDefault(_a, this.#volatileA);
     const gamma = this.#valueOrDefault(_gamma, this.#gamma);
     const extraProfit = this.#valueOrDefault(_extraProfit, this.#extraProfit);
@@ -294,7 +296,7 @@ export class CLAMM {
   }
 
   async addLiquidity({
-    txb: _txb,
+    txb = new TransactionBlock(),
     pool: _pool,
     coinsIn,
     minAmount: _minAmount,
@@ -311,7 +313,6 @@ export class CLAMM {
       `This pool has ${pool.coinTypes.length} coins, you only passed ${coinsIn.length}`,
     );
 
-    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
     const minAmount = this.#valueOrDefault(_minAmount, 0n);
 
     const moduleName =
@@ -333,6 +334,60 @@ export class CLAMM {
     return {
       txb,
       lpCoin,
+    };
+  }
+
+  async removeLiquidity({
+    txb = new TransactionBlock(),
+    pool: _pool,
+    lpCoin,
+    minAmounts: _minAmounts,
+  }: RemoveLiquidityArgs): Promise<RemoveLiquidityReturn> {
+    let pool = _pool;
+    let minAmounts = _minAmounts;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    if (!minAmounts) minAmounts = pool.coinTypes.map(() => 0n);
+
+    const numOfCoins = pool.coinTypes.length;
+
+    invariant(
+      minAmounts.length === numOfCoins,
+      `You must provide the min amount for ${numOfCoins} coins`,
+    );
+
+    const moduleName = pool.isStable
+      ? this.#stableModule
+      : this.#volatileModule;
+
+    const args = pool.isStable
+      ? [
+          txb.object(pool.poolObjectId),
+          txb.object(SUI_CLOCK_OBJECT_ID),
+          this.#object(txb, lpCoin),
+          txb.pure(minAmounts),
+        ]
+      : [
+          txb.object(pool.poolObjectId),
+          this.#object(txb, lpCoin),
+          txb.pure(minAmounts),
+        ];
+
+    const result = txb.moveCall({
+      target: `${this.#package}::${moduleName}::${REMOVE_LIQUIDITY_FUNCTION_NAME_MAP[numOfCoins]}`,
+      typeArguments: [...pool.coinTypes, pool.lpCoinType],
+      arguments: args,
+    });
+
+    return {
+      txb,
+      coinsOut: Array(numOfCoins)
+        .fill(0)
+        .map((_, index) => result[index]),
     };
   }
 

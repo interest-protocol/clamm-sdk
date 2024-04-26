@@ -1,11 +1,10 @@
+import { CoinMetadata } from '@mysten/sui.js/client';
 import {
   TransactionArgument,
   TransactionBlock,
   TransactionObjectArgument,
   TransactionResult,
 } from '@mysten/sui.js/transactions';
-
-import { CoinMetadata } from '@mysten/sui.js/client';
 
 interface MaybeTxb {
   txb?: TransactionBlock;
@@ -22,14 +21,14 @@ export type TransactionNestedResult = Extract<
   { index: number; resultIndex: number; kind: 'NestedResult' }
 >;
 
-export interface ClammNewStableArgs extends MaybeTxb {
+export interface NewStableArgs extends MaybeTxb {
   typeArguments: string[];
   coins: MoveObjectArgument[];
   lpCoinTreasuryCap: MoveObjectArgument;
   a?: bigint;
 }
 
-export interface ClammNewVolatileArgs extends MaybeTxb {
+export interface NewVolatileArgs extends MaybeTxb {
   typeArguments: string[];
   coins: MoveObjectArgument[];
   lpCoinTreasuryCap: MoveObjectArgument;
@@ -49,7 +48,7 @@ export interface SharePoolArgs {
   pool: TransactionNestedResult;
 }
 
-export interface ClammNewPoolReturn {
+export interface NewPoolReturn {
   txb: TransactionBlock;
   pool: TransactionNestedResult;
   poolAdmin: TransactionNestedResult;
@@ -65,6 +64,17 @@ export interface AddLiquidityArgs extends MaybeTxb {
 export interface AddLiquidityReturn {
   txb: TransactionBlock;
   lpCoin: TransactionResult;
+}
+
+export interface RemoveLiquidityArgs extends MaybeTxb {
+  pool: InterestPool | string;
+  minAmounts?: readonly bigint[];
+  lpCoin: MoveObjectArgument;
+}
+
+export interface RemoveLiquidityReturn extends MaybeTxb {
+  txb: TransactionBlock;
+  coinsOut: TransactionNestedResult[];
 }
 
 export interface SwapArgs extends MaybeTxb {

@@ -1,14 +1,15 @@
 import {
   CoinMetadata,
-  SuiClient,
   MoveStruct,
+  SuiClient,
   SuiObjectResponse,
 } from '@mysten/sui.js/client';
 import { normalizeStructTag, normalizeSuiAddress } from '@mysten/sui.js/utils';
-import data from './data/metadata.json';
-import { CoinMeta, StablePoolState, VolatilePoolState } from './clamm.types';
 import { path, pathOr, prop, propOr } from 'ramda';
 import invariant from 'tiny-invariant';
+
+import { CoinMeta, StablePoolState, VolatilePoolState } from './clamm.types';
+import data from './data/metadata.json';
 
 const cache = new Map<string, CoinMetadata>(
   (data as CoinMeta[]).map(meta => [meta.type, meta]),

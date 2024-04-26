@@ -1,11 +1,12 @@
 import { TransactionBlock } from '@mysten/sui.js/transactions';
+
 import {
   CLAMM,
-  STABLE_POOL_USDC_USDT_OBJECT_ID,
-  keypair,
   executeTx,
+  keypair,
   log,
   STABLE_POOL_USDC_TREASURY_CAP,
+  STABLE_POOL_USDC_USDT_OBJECT_ID,
   STABLE_POOL_USDT_TREASURY_CAP,
 } from '../utils.script';
 
@@ -13,7 +14,7 @@ import {
   try {
     const pool = await CLAMM.getPool(STABLE_POOL_USDC_USDT_OBJECT_ID);
 
-    let initTxb = new TransactionBlock();
+    const initTxb = new TransactionBlock();
 
     // USDC has 6 decimals
     const coinA = initTxb.moveCall({

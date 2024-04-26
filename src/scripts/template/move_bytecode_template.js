@@ -638,7 +638,7 @@ module.exports.__wbg_set_841ac57cff3d672b = function () {
 
 module.exports.__wbg_new_898a68150f225f2e = function () {
   return logError(function () {
-    const ret = new Array();
+    const ret = [];
     return addHeapObject(ret);
   }, arguments);
 };
