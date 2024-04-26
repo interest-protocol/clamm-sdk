@@ -78,10 +78,15 @@ export interface RemoveLiquidityReturn extends MaybeTxb {
 }
 
 export interface SwapArgs extends MaybeTxb {
+  pool: InterestPool | string;
   coinInType: string;
-  coinOutType: string;
   coinIn: MoveObjectArgument;
   minAmount?: bigint;
+}
+
+export interface SwapReturn {
+  txb: TransactionBlock;
+  coinOut: TransactionResult;
 }
 
 interface Pool<T> {

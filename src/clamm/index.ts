@@ -20,6 +20,8 @@ import {
   SharePoolArgs,
   StablePool,
   VolatilePool,
+  SwapArgs,
+  SwapReturn,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -299,7 +301,7 @@ export class CLAMM {
     txb = new TransactionBlock(),
     pool: _pool,
     coinsIn,
-    minAmount: _minAmount,
+    minAmount = 0n,
   }: AddLiquidityArgs): Promise<AddLiquidityReturn> {
     let pool = _pool;
 
@@ -312,8 +314,6 @@ export class CLAMM {
       pool.coinTypes.length === coinsIn.length,
       `This pool has ${pool.coinTypes.length} coins, you only passed ${coinsIn.length}`,
     );
-
-    const minAmount = this.#valueOrDefault(_minAmount, 0n);
 
     const moduleName =
       !pool.isStable && 'gamma' in pool.state
@@ -388,6 +388,48 @@ export class CLAMM {
       coinsOut: Array(numOfCoins)
         .fill(0)
         .map((_, index) => result[index]),
+    };
+  }
+
+  async swap({
+    txb = new TransactionBlock(),
+    pool: _pool,
+    coinIn,
+    coinInType,
+    minAmount = 0n,
+  }: SwapArgs): Promise<SwapReturn> {
+    let pool = _pool;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    invariant(
+      pool.coinTypes.includes(coinInType),
+      'Pool does not support the coin in',
+    );
+
+    const coinOutType = pool.coinTypes.filter(x => x !== coinInType)[0];
+
+    const moduleName = pool.isStable
+      ? this.#stableModule
+      : this.#volatileModule;
+
+    const coinOut = txb.moveCall({
+      target: `${this.#package}::${moduleName}::swap`,
+      typeArguments: [coinInType, coinOutType, pool.lpCoinType],
+      arguments: [
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        this.#object(txb, coinIn),
+        txb.pure(minAmount),
+      ],
+    });
+
+    return {
+      txb,
+      coinOut,
     };
   }
 
