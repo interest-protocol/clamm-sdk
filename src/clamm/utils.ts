@@ -133,7 +133,7 @@ export const parseVolatileV1State = (struct: MoveStruct) => {
     ),
     minA: BigInt(prop('min_a', fields)),
     maxA: BigInt(prop('max_a', fields)),
-    nCoins: prop('admin_balance', fields).length,
+    nCoins: prop('balances', fields).length,
     notAdjusted: prop('not_adjusted', fields),
     virtualPrice: BigInt(prop('virtual_price', fields)),
     xcpProfit: BigInt(prop('xcp_profit', fields)),

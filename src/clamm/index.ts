@@ -10,7 +10,7 @@ import {
   ClammNewVolatileArgs,
   SharePoolArgs,
   AddLiquidityArgs,
-  Pool,
+  InterestPool,
   StablePool,
   VolatilePool,
   AddLiquidityReturn,
@@ -199,7 +199,7 @@ export class CLAMM {
     };
   }
 
-  async getPool(id: string): Promise<Pool> {
+  async getPool(id: string): Promise<InterestPool> {
     invariant(isValidSuiObjectId(id), 'Invalid pool object id');
     const pool = await this.#client.getObject({
       id,
@@ -296,19 +296,20 @@ export class CLAMM {
   async addLiquidity({
     txb: _txb,
     pool: _pool,
-    poolObjectId,
     coinsIn,
     minAmount: _minAmount,
   }: AddLiquidityArgs): Promise<AddLiquidityReturn> {
     let pool = _pool;
 
-    if (!pool && !poolObjectId)
-      invariant(false, 'Must give either pool or pool object id');
-
     // lazy fetch
-    if (!pool) {
-      pool = await this.getPool(poolObjectId!);
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
     }
+
+    invariant(
+      pool.coinTypes.length === coinsIn.length,
+      `This pool has ${pool.coinTypes.length} coins, you only passed ${coinsIn.length}`,
+    );
 
     let txb = this.#valueOrDefault(_txb, new TransactionBlock());
     const minAmount = this.#valueOrDefault(_minAmount, 0n);

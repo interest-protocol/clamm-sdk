@@ -57,8 +57,7 @@ export interface ClammNewPoolReturn {
 }
 
 export interface AddLiquidityArgs extends MaybeTxb {
-  pool?: Pool;
-  poolObjectId?: string;
+  pool: InterestPool | string;
   minAmount?: bigint;
   coinsIn: MoveObjectArgument[];
 }
@@ -75,7 +74,7 @@ export interface SwapArgs extends MaybeTxb {
   minAmount?: bigint;
 }
 
-interface InterestPool<T> {
+interface Pool<T> {
   poolObjectId: string;
   stateId: string;
   lpCoinType: string;
@@ -148,6 +147,6 @@ export interface VolatilePoolState {
   coinStateMap: Record<string, CoinState>;
 }
 
-export type StablePool = InterestPool<StablePoolState>;
-export type VolatilePool = InterestPool<VolatilePoolState>;
-export type Pool = StablePool | VolatilePool;
+export type StablePool = Pool<StablePoolState>;
+export type VolatilePool = Pool<VolatilePoolState>;
+export type InterestPool = StablePool | VolatilePool;
