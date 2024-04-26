@@ -1,7 +1,6 @@
 import {
   TransactionBlock,
   TransactionObjectArgument,
-  TransactionResult,
 } from '@mysten/sui.js/transactions';
 import invariant from 'tiny-invariant';
 import { SuiClient } from '@mysten/sui.js/client';
@@ -14,9 +13,13 @@ import {
   Pool,
   StablePool,
   VolatilePool,
+  AddLiquidityReturn,
 } from './clamm.types';
 import { SUI_CLOCK_OBJECT_ID, isValidSuiObjectId } from '@mysten/sui.js/utils';
-import { NEW_POOL_FUNCTION_NAME_MAP } from './constants';
+import {
+  NEW_POOL_FUNCTION_NAME_MAP,
+  ADD_LIQUIDITY_FUNCTION_NAME_MAP,
+} from './constants';
 import {
   getCoinMetas,
   parseStableV1State,
@@ -291,14 +294,45 @@ export class CLAMM {
   }
 
   async addLiquidity({
+    txb: _txb,
+    pool: _pool,
     poolObjectId,
-    minAmount,
-  }: AddLiquidityArgs): Promise<TransactionResult> {
-    console.log({
-      poolObjectId,
-      minAmount,
+    coinsIn,
+    minAmount: _minAmount,
+  }: AddLiquidityArgs): Promise<AddLiquidityReturn> {
+    let pool = _pool;
+
+    if (!pool && !poolObjectId)
+      invariant(false, 'Must give either pool or pool object id');
+
+    // lazy fetch
+    if (!pool) {
+      pool = await this.getPool(poolObjectId!);
+    }
+
+    let txb = this.#valueOrDefault(_txb, new TransactionBlock());
+    const minAmount = this.#valueOrDefault(_minAmount, 0n);
+
+    const moduleName =
+      !pool.isStable && 'gamma' in pool.state
+        ? this.#volatileModule
+        : this.#stableModule;
+
+    const lpCoin = txb.moveCall({
+      target: `${this.#package}::${moduleName}::${ADD_LIQUIDITY_FUNCTION_NAME_MAP[pool.coinTypes.length]}`,
+      typeArguments: [...pool.coinTypes, pool.lpCoinType],
+      arguments: [
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        ...coinsIn.map(x => this.#object(txb, x)),
+        txb.pure(minAmount),
+      ],
     });
-    throw new Error('');
+
+    return {
+      txb,
+      lpCoin,
+    };
   }
 
   async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {

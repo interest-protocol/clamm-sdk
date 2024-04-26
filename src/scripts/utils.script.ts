@@ -10,10 +10,14 @@ import invariant from 'tiny-invariant';
 import { bcs } from '@mysten/sui.js/bcs';
 import * as template from './template/move_bytecode_template.js';
 import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui.js/utils';
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import {
+  TransactionBlock,
+  TransactionResult,
+} from '@mysten/sui.js/transactions';
 import { OwnedObjectRef } from '@mysten/sui.js/client';
 import util from 'util';
 import { pathOr } from 'ramda';
+
 dotenv.config();
 
 export const keypair = Ed25519Keypair.fromSecretKey(
@@ -171,6 +175,8 @@ export const executeTx = async (txb: TransactionBlock) => {
     return;
   }
 
+  console.log('SUCCESS!');
+
   // get all created objects IDs
   const createdObjectIds = result.effects.created!.map(
     (item: OwnedObjectRef) => item.reference.objectId,
@@ -271,3 +277,49 @@ export const STABLE_POOL_USDC_USDT_OBJECT_ID =
 
 export const VOLATILE_POOL_USDC_BTC_OBJECT_ID =
   '0x0f576fec03e56e7c9d0d1e2563a8fadb12e02cb55be80b7afa4e6d542b15472a';
+
+export const STABLE_POOL_USDC_TREASURY_CAP =
+  '0x48a52eeacbfed8d9c30c20ef6fab4b3987986233fe56e85dfca2011a8a9a71e4';
+
+export const STABLE_POOL_USDT_TREASURY_CAP =
+  '0x9f21f074c7645c71ad614007abfb2333ed02a6f7841707bcb07e97f1d4802819';
+
+export const VOLATILE_POOL_USDC_TREASURY_CAP =
+  '0x6e7a09318227641aac984361e6fa2f899ff5ec435acbbb56431ab05111ca7661';
+
+export const VOLATILE_POOL_BTC_TREASURY_CAP =
+  '0x13700769e1fe3fe7d9830ae3c9d5340d62cd42f05a1ccf5630fadd158c3693d7';
+
+export function removeLeadingZeros(address: string): string {
+  return (address as any).replaceAll(/0x0+/g, '0x');
+}
+
+export async function getCoinOfValue(
+  txb: TransactionBlock,
+  coinType: string,
+  coinValue: bigint,
+): Promise<TransactionResult> {
+  let coinOfValue: TransactionResult;
+  coinType = removeLeadingZeros(coinType);
+  if (coinType === '0x2::sui::SUI') {
+    coinOfValue = txb.splitCoins(txb.gas, [txb.pure(coinValue)]);
+  } else {
+    const paginatedCoins = await client.getCoins({
+      owner: keypair.toSuiAddress(),
+      coinType,
+    });
+
+    const [firstCoin, ...otherCoins] = paginatedCoins.data;
+
+    const firstCoinInput = txb.object(firstCoin.coinObjectId);
+
+    if (otherCoins.length > 0) {
+      txb.mergeCoins(
+        firstCoinInput,
+        otherCoins.map(coin => coin.coinObjectId),
+      );
+    }
+    coinOfValue = txb.splitCoins(firstCoinInput, [txb.pure(coinValue)]);
+  }
+  return coinOfValue;
+}

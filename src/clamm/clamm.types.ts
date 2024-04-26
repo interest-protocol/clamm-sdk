@@ -2,6 +2,7 @@ import {
   TransactionArgument,
   TransactionBlock,
   TransactionObjectArgument,
+  TransactionResult,
 } from '@mysten/sui.js/transactions';
 
 import { CoinMetadata } from '@mysten/sui.js/client';
@@ -56,8 +57,15 @@ export interface ClammNewPoolReturn {
 }
 
 export interface AddLiquidityArgs extends MaybeTxb {
-  poolObjectId: string;
-  minAmount: bigint;
+  pool?: Pool;
+  poolObjectId?: string;
+  minAmount?: bigint;
+  coinsIn: MoveObjectArgument[];
+}
+
+export interface AddLiquidityReturn {
+  txb: TransactionBlock;
+  lpCoin: TransactionResult;
 }
 
 export interface SwapArgs extends MaybeTxb {
