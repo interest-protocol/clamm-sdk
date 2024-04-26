@@ -5,8 +5,8 @@ import {
   executeTx,
   keypair,
   log,
-  VOLATILE_POOL_USDC_TREASURY_CAP,
   VOLATILE_POOL_USDC_BTC_OBJECT_ID,
+  VOLATILE_POOL_USDC_TREASURY_CAP,
 } from '../utils.script';
 
 (async () => {

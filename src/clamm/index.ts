@@ -19,9 +19,9 @@ import {
   RemoveLiquidityReturn,
   SharePoolArgs,
   StablePool,
-  VolatilePool,
   SwapArgs,
   SwapReturn,
+  VolatilePool,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
