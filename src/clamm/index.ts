@@ -11,20 +11,20 @@ import invariant from 'tiny-invariant';
 import {
   AddLiquidityArgs,
   AddLiquidityReturn,
+  InterestPool,
   NewPoolReturn,
   NewStableArgs,
   NewVolatileArgs,
-  InterestPool,
+  RemoveLiquidityArgs,
+  RemoveLiquidityReturn,
   SharePoolArgs,
   StablePool,
   VolatilePool,
-  RemoveLiquidityArgs,
-  RemoveLiquidityReturn,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
-  REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
   NEW_POOL_FUNCTION_NAME_MAP,
+  REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
 } from './constants';
 import {
   createCoinStateMap,

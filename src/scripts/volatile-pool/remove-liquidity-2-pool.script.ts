@@ -3,9 +3,9 @@ import { TransactionBlock } from '@mysten/sui.js/transactions';
 import {
   CLAMM,
   executeTx,
+  getCoinOfValue,
   keypair,
   log,
-  getCoinOfValue,
   VOLATILE_POOL_USDC_BTC_OBJECT_ID,
 } from '../utils.script';
 
