@@ -1,10 +1,5 @@
 {
-  "extends": "./tsconfig",
-  "include":[
-    "src/clamm/**/*",
-    "src/clamm/**/*.json",
-  ],
-  "exclude": [
-    "src/scripts/**/*",
-  ]
+  "extends": "./tsconfig.json",
+  "include": ["src/clamm/**/*", "src/clamm/**/*.json"],
+  "exclude": ["src/scripts/*"]
 }

@@ -30,6 +30,7 @@ import {
       pool,
       coinIn,
       coinInType: pool.coinTypes[0],
+      coinOutType: pool.coinTypes[1],
     });
 
     txb.transferObjects([coinOut], txb.pure(keypair.toSuiAddress()));

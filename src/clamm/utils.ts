@@ -7,9 +7,11 @@ import {
 import { normalizeStructTag, normalizeSuiAddress } from '@mysten/sui.js/utils';
 import { path, pathOr, prop, propOr } from 'ramda';
 import invariant from 'tiny-invariant';
-
+import { map, toString } from 'ramda';
 import { CoinMeta, StablePoolState, VolatilePoolState } from './clamm.types';
 import data from './data/metadata.json';
+
+export const listToString = map(toString);
 
 const cache = new Map<string, CoinMetadata>(
   (data as CoinMeta[]).map(meta => [meta.type, meta]),

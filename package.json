@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "1.0.0-alpha",
+  "version": "2.0.1-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
@@ -8,7 +8,7 @@
   "description": "The SDK for Interest Protocol Sui CLAMM",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/clamm/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/index.ts",
@@ -29,11 +29,11 @@
     "stable-swap": "npx ts-node ./src/scripts/stable-pool/swap.script.ts",
     "volatile-swap": "npx ts-node ./src/scripts/volatile-pool/swap.script.ts",
     "lint": "npx eslint . --fix",
-    "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
-    "build:tsup": "tsup ./src/index.ts --format esm,cjs --sourcemap",
-    "build:types": "tsc --project tsconfig.json && resolve-tspaths",
-    "build": "npx run build:types && npx run build:tsup",
-    "prepublishOnly": "npx run clean && npx run build"
+    "clean": "rimraf dist && rimraf tsconfig.prod.tsbuildinfo && rimraf tsconfig.tsbuildinfo",
+    "build:tsup": "tsup --format esm,cjs --sourcemap",
+    "build:types": "tsc --project tsconfig.prod.json",
+    "build": "pnpm run clean && pnpm run build:tsup && pnpm run build:types",
+    "prepublishOnly": "pnpm run clean && pnpm run build"
   },
   "keywords": [
     "sui",
@@ -66,5 +66,13 @@
     "tsup": "^8.0.2",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.7.1"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "splitting": false,
+    "sourcemap": true,
+    "clean": true
   }
 }

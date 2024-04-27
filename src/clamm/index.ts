@@ -34,6 +34,7 @@ import {
   normalizeSuiCoinType,
   parseStableV1State,
   parseVolatileV1State,
+  listToString,
 } from './utils';
 
 export class CLAMM {
@@ -55,6 +56,8 @@ export class CLAMM {
   #gammaFee = 230000000000000n;
   stableType: string;
   volatileType: string;
+  // 1e18
+  PRECISION = 1000000000000000000n;
 
   constructor(
     suiClient: SuiClient,
@@ -119,7 +122,7 @@ export class CLAMM {
         coinDecimals,
         ...coins.map(x => this.#object(txb, x)),
         supply,
-        txb.pure(a),
+        txb.pure.u256(a.toString()),
       ],
     });
 
@@ -173,10 +176,14 @@ export class CLAMM {
         coinDecimals,
         ...coins.map(x => this.#object(txb, x)),
         supply,
-        txb.pure([a, gamma]),
-        txb.pure([extraProfit, adjustmentStep, maHalfTime]),
-        txb.pure(typeArguments.length === 3 ? prices[0] : prices),
-        txb.pure([midFee, outFee, gammaFee]),
+        txb.pure(listToString([a, gamma])),
+        txb.pure(listToString([extraProfit, adjustmentStep, maHalfTime])),
+        txb.pure(
+          typeArguments.length === 3
+            ? prices[0].toString()
+            : listToString(prices),
+        ),
+        txb.pure(listToString([midFee, outFee, gammaFee])),
       ],
     });
 
@@ -314,7 +321,7 @@ export class CLAMM {
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
         ...coinsIn.map(x => this.#object(txb, x)),
-        txb.pure(minAmount),
+        txb.pure.u64(minAmount.toString()),
       ],
     });
 
@@ -356,12 +363,12 @@ export class CLAMM {
           txb.object(pool.poolObjectId),
           txb.object(SUI_CLOCK_OBJECT_ID),
           this.#object(txb, lpCoin),
-          txb.pure(minAmounts),
+          txb.pure(listToString(minAmounts)),
         ]
       : [
           txb.object(pool.poolObjectId),
           this.#object(txb, lpCoin),
-          txb.pure(minAmounts),
+          txb.pure(listToString(minAmounts)),
         ];
 
     const result = txb.moveCall({
@@ -383,6 +390,7 @@ export class CLAMM {
     pool: _pool,
     coinIn,
     coinInType,
+    coinOutType,
     minAmount = 0n,
   }: SwapArgs): Promise<SwapReturn> {
     let pool = _pool;
@@ -397,7 +405,10 @@ export class CLAMM {
       'Pool does not support the coin in',
     );
 
-    const coinOutType = pool.coinTypes.filter(x => x !== coinInType)[0];
+    invariant(
+      pool.coinTypes.includes(coinOutType),
+      'Pool does not support the coin out',
+    );
 
     const moduleName = pool.isStable
       ? this.#stableModule
@@ -410,7 +421,7 @@ export class CLAMM {
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
         this.#object(txb, coinIn),
-        txb.pure(minAmount),
+        txb.pure.u64(minAmount.toString()),
       ],
     });
 
