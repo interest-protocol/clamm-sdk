@@ -1,3 +1,4 @@
+import { bcs } from '@mysten/sui.js/bcs';
 import { MoveStruct, SuiClient } from '@mysten/sui.js/client';
 import {
   TransactionBlock,
@@ -6,7 +7,6 @@ import {
 import { isValidSuiObjectId, SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
 import { pathOr } from 'ramda';
 import invariant from 'tiny-invariant';
-import { bcs } from '@mysten/sui.js/bcs';
 
 import {
   AddLiquidityArgs,
@@ -18,18 +18,18 @@ import {
   NewVolatileArgs,
   QuoteAddLiquidityArgs,
   QuoteRemoveLiquidityArgs,
+  QuoteRemoveLiquidityOneCoiArgs,
   QuoteSwapArgs,
+  QuoteSwapReturn,
   RemoveLiquidityArgs,
+  RemoveLiquidityOneCoinArgs,
+  RemoveLiquidityOneCoinReturn,
   RemoveLiquidityReturn,
   SharePoolArgs,
   StablePool,
   SwapArgs,
   SwapReturn,
   VolatilePool,
-  QuoteSwapReturn,
-  QuoteRemoveLiquidityOneCoiArgs,
-  RemoveLiquidityOneCoinArgs,
-  RemoveLiquidityOneCoinReturn,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -335,7 +335,7 @@ export class CLAMM {
     if (minAmount) {
       min = txb.pure.u64(minAmount.toString());
     } else {
-      let minAmounts = txb.moveCall({
+      const minAmounts = txb.moveCall({
         target: '0x1::vector::empty',
         typeArguments: [bcs.U64.name],
       });
@@ -384,7 +384,7 @@ export class CLAMM {
     minAmounts: _minAmounts,
   }: RemoveLiquidityArgs): Promise<RemoveLiquidityReturn> {
     let pool = _pool;
-    let minAmounts = _minAmounts;
+    const minAmounts = _minAmounts;
 
     // lazy fetch
     if (typeof pool === 'string') {
@@ -400,7 +400,7 @@ export class CLAMM {
     if (minAmounts && minAmounts.length === pool.coinTypes.length) {
       min = txb.pure(listToString(minAmounts));
     } else {
-      let value = this.#coinValue(txb, lpCoin, pool.lpCoinType);
+      const value = this.#coinValue(txb, lpCoin, pool.lpCoinType);
 
       min = txb.moveCall({
         target: `${this.#package}::${moduleName}::quote_remove_liquidity`,
