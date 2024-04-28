@@ -1,4 +1,4 @@
-import { CoinMetadata } from '@mysten/sui.js/client';
+import { CoinMetadata, SuiClient } from '@mysten/sui.js/client';
 import {
   TransactionArgument,
   TransactionBlock,
@@ -8,6 +8,14 @@ import {
 
 interface MaybeTxb {
   txb?: TransactionBlock;
+}
+
+export interface ClammConstructor {
+  suiClient: SuiClient;
+  packageAddress: string;
+  suiTearsAddress: string;
+  network: 'testnet' | 'mainnet' | 'devnet';
+  coinDecimalAddress?: string | null;
 }
 
 export type CoinMeta = CoinMetadata & {

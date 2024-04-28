@@ -22,6 +22,7 @@ import {
   SwapArgs,
   SwapReturn,
   VolatilePool,
+  ClammConstructor,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -54,23 +55,26 @@ export class CLAMM {
   #midFee = 26000000n;
   #outFee = 45000000n;
   #gammaFee = 230000000000000n;
+  #network: ClammConstructor['network'];
   stableType: string;
   volatileType: string;
   // 1e18
   PRECISION = 1000000000000000000n;
 
-  constructor(
-    suiClient: SuiClient,
-    packageAddress: string,
-    suiTearsAddress: string,
-    coinDecimalAddress: string | null | undefined = null,
-  ) {
+  constructor({
+    packageAddress,
+    suiClient,
+    suiTearsAddress,
+    network,
+    coinDecimalAddress = null,
+  }: ClammConstructor) {
     this.#client = suiClient;
     this.#package = packageAddress;
     this.#suiTears = suiTearsAddress;
     this.#coinDecimal = coinDecimalAddress;
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
+    this.#network = network;
   }
 
   shareStablePool({ txb, pool }: SharePoolArgs) {
@@ -443,19 +447,38 @@ export class CLAMM {
           arguments: [cap],
         });
 
-    const metadataMap = await getCoinMetas(this.#client, typeArguments);
+    if (this.#network === 'mainnet') {
+      const metadataMap = await getCoinMetas(this.#client, typeArguments);
 
-    typeArguments.forEach((coinType, index) => {
-      const metadata = metadataMap.get(coinType);
-      invariant(metadata, 'Coin must have a metadata');
-      invariant(metadata.id, 'Metadata does not have an id');
+      typeArguments.forEach((coinType, index) => {
+        const metadata = metadataMap.get(coinType);
+        invariant(metadata, 'Coin must have a metadata');
+        invariant(metadata.id, 'Metadata does not have an id');
 
-      txb.moveCall({
-        target: `${this.#suiTears}::coin_decimals::add`,
-        typeArguments: [typeArguments[index]],
-        arguments: [coinDecimals, txb.object(metadata.id)],
+        txb.moveCall({
+          target: `${this.#suiTears}::coin_decimals::add`,
+          typeArguments: [typeArguments[index]],
+          arguments: [coinDecimals, txb.object(metadata.id)],
+        });
       });
-    });
+    } else {
+      const promises = typeArguments.map(coinType =>
+        this.#client.getCoinMetadata({ coinType }),
+      );
+
+      const metadatas = await Promise.all(promises);
+
+      metadatas.forEach((metadata, index) => {
+        invariant(metadata, 'Coin must have a metadata');
+        invariant(metadata.id, 'Metadata does not have an id');
+
+        txb.moveCall({
+          target: `${this.#suiTears}::coin_decimals::add`,
+          typeArguments: [typeArguments[index]],
+          arguments: [coinDecimals, txb.object(metadata.id)],
+        });
+      });
+    }
 
     return [coinDecimals, cap];
   }

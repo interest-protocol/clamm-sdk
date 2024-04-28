@@ -101,11 +101,12 @@ export const client = new SuiClient({ url: getFullnodeUrl('testnet') });
 
 invariant(process.env.CLAMM && process.env.SUI_TEARS, 'env not set');
 
-export const CLAMM = new CLAMM_(
-  client,
-  process.env.CLAMM,
-  process.env.SUI_TEARS,
-);
+export const CLAMM = new CLAMM_({
+  suiClient: client,
+  packageAddress: process.env.CLAMM,
+  suiTearsAddress: process.env.SUI_TEARS,
+  network: 'testnet',
+});
 
 interface GetByteCodeArgs {
   decimals: number;
