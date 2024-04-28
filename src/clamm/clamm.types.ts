@@ -98,9 +98,40 @@ export interface SwapReturn {
   coinOut: TransactionResult;
 }
 
+export interface RemoveLiquidityOneCoinArgs extends MaybeTxb {
+  pool: InterestPool | string;
+  coinOutType: string;
+  lpCoin: MoveObjectArgument;
+  minAmount?: bigint;
+}
+
+export interface RemoveLiquidityOneCoinReturn {
+  txb: TransactionBlock;
+  coinOut: TransactionResult;
+}
+
 export interface QuoteSwapArgs {
   pool: InterestPool | string;
   coinInType: string;
+  coinOutType: string;
+  amount: bigint;
+}
+
+export interface QuoteSwapVolatileReturn {
+  amount: bigint;
+  fee: bigint;
+}
+
+export interface QuoteSwapStableReturn {
+  amount: bigint;
+  feeIn: bigint;
+  feeOut: bigint;
+}
+
+export type QuoteSwapReturn = QuoteSwapVolatileReturn | QuoteSwapStableReturn;
+
+export interface QuoteRemoveLiquidityOneCoiArgs {
+  pool: InterestPool | string;
   coinOutType: string;
   amount: bigint;
 }
