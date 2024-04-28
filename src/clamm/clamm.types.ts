@@ -98,6 +98,24 @@ export interface SwapReturn {
   coinOut: TransactionResult;
 }
 
+export interface QuoteSwapArgs {
+  pool: InterestPool | string;
+  coinInType: string;
+  coinOutType: string;
+  amount: bigint;
+}
+
+export interface QuoteAddLiquidityArgs {
+  pool: InterestPool | string;
+  // Same order as coin types
+  amounts: readonly bigint[];
+}
+
+export interface QuoteRemoveLiquidityArgs {
+  pool: InterestPool | string;
+  amount: bigint;
+}
+
 interface Pool<T> {
   poolObjectId: string;
   stateId: string;

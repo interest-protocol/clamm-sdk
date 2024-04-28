@@ -23,17 +23,26 @@ import {
       ],
     });
 
+    const minAmount = await CLAMM.quoteSwap({
+      pool,
+      coinInType: pool.coinTypes[0],
+      coinOutType: pool.coinTypes[1],
+      amount: 10_000_000_000n,
+    });
+
     const { coinOut, txb } = await CLAMM.swap({
       txb: initTxb,
       pool,
       coinIn,
       coinInType: pool.coinTypes[0],
       coinOutType: pool.coinTypes[1],
+      minAmount: 0n,
     });
 
     txb.transferObjects([coinOut], txb.pure(keypair.toSuiAddress()));
 
     const response = await executeTx(txb);
+    log(minAmount);
     log(response);
   } catch (e) {
     console.log(e);

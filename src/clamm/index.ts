@@ -1,5 +1,4 @@
-import { SuiClient } from '@mysten/sui.js/client';
-import { MoveStruct } from '@mysten/sui.js/client';
+import { MoveStruct, SuiClient } from '@mysten/sui.js/client';
 import {
   TransactionBlock,
   TransactionObjectArgument,
@@ -11,10 +10,14 @@ import invariant from 'tiny-invariant';
 import {
   AddLiquidityArgs,
   AddLiquidityReturn,
+  ClammConstructor,
   InterestPool,
   NewPoolReturn,
   NewStableArgs,
   NewVolatileArgs,
+  QuoteAddLiquidityArgs,
+  QuoteRemoveLiquidityArgs,
+  QuoteSwapArgs,
   RemoveLiquidityArgs,
   RemoveLiquidityReturn,
   SharePoolArgs,
@@ -22,7 +25,6 @@ import {
   SwapArgs,
   SwapReturn,
   VolatilePool,
-  ClammConstructor,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -31,11 +33,12 @@ import {
 } from './constants';
 import {
   createCoinStateMap,
+  devInspectAndGetReturnValues,
   getCoinMetas,
+  listToString,
   normalizeSuiCoinType,
   parseStableV1State,
   parseVolatileV1State,
-  listToString,
 } from './utils';
 
 // Added this line to get all types into one file
@@ -249,8 +252,8 @@ export class CLAMM {
 
     invariant(
       poolState.data &&
-      poolState.data.content &&
-      poolState.data.content.dataType === 'moveObject',
+        poolState.data.content &&
+        poolState.data.content.dataType === 'moveObject',
       'PoolState data not found',
     );
 
@@ -328,7 +331,7 @@ export class CLAMM {
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
         ...coinsIn.map(x => this.#object(txb, x)),
-        txb.pure.u64(minAmount.toString()),
+        txb.pure.u64(minAmount),
       ],
     });
 
@@ -367,16 +370,16 @@ export class CLAMM {
 
     const args = pool.isStable
       ? [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        this.#object(txb, lpCoin),
-        txb.pure(listToString(minAmounts)),
-      ]
+          txb.object(pool.poolObjectId),
+          txb.object(SUI_CLOCK_OBJECT_ID),
+          this.#object(txb, lpCoin),
+          txb.pure(listToString(minAmounts)),
+        ]
       : [
-        txb.object(pool.poolObjectId),
-        this.#object(txb, lpCoin),
-        txb.pure(listToString(minAmounts)),
-      ];
+          txb.object(pool.poolObjectId),
+          this.#object(txb, lpCoin),
+          txb.pure(listToString(minAmounts)),
+        ];
 
     const result = txb.moveCall({
       target: `${this.#package}::${moduleName}::${REMOVE_LIQUIDITY_FUNCTION_NAME_MAP[numOfCoins]}`,
@@ -421,6 +424,21 @@ export class CLAMM {
       ? this.#stableModule
       : this.#volatileModule;
 
+    let min = undefined;
+    if (minAmount) {
+      min = txb.pure.u64(minAmount.toString());
+    } else {
+      min = txb.moveCall({
+        target: `${this.#package}::${this.#volatileModule}::quote_swap`,
+        typeArguments: [coinInType, coinOutType, pool.lpCoinType],
+        arguments: [
+          txb.object(pool.poolObjectId),
+          txb.object(SUI_CLOCK_OBJECT_ID),
+          this.#coinValue(txb, coinIn, coinInType),
+        ],
+      });
+    }
+
     const coinOut = txb.moveCall({
       target: `${this.#package}::${moduleName}::swap`,
       typeArguments: [coinInType, coinOutType, pool.lpCoinType],
@@ -428,7 +446,7 @@ export class CLAMM {
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
         this.#object(txb, coinIn),
-        txb.pure.u64(minAmount.toString()),
+        min,
       ],
     });
 
@@ -436,6 +454,112 @@ export class CLAMM {
       txb,
       coinOut,
     };
+  }
+
+  async quoteSwap({
+    pool: _pool,
+    coinInType,
+    coinOutType,
+    amount,
+  }: QuoteSwapArgs): Promise<bigint> {
+    if (!amount) return 0n;
+    let pool = _pool;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    invariant(
+      pool.coinTypes.includes(coinInType),
+      'Pool does not support the coin in',
+    );
+
+    invariant(
+      pool.coinTypes.includes(coinOutType),
+      'Pool does not support the coin out',
+    );
+
+    const txb = new TransactionBlock();
+
+    txb.moveCall({
+      target: `${this.#package}::${this.#volatileModule}::quote_swap`,
+      typeArguments: [coinInType, coinOutType, pool.lpCoinType],
+      arguments: [
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        txb.pure.u64(amount),
+      ],
+    });
+
+    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+
+    invariant(result.length, 'Result is empty');
+    invariant(typeof result[0] === 'string', 'Invalid return type');
+
+    return BigInt(result[0]);
+  }
+
+  async quoteAddLiquidity({
+    pool: _pool,
+    amounts,
+  }: QuoteAddLiquidityArgs): Promise<bigint> {
+    if (!amounts.length) return 0n;
+
+    let pool = _pool;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    const txb = new TransactionBlock();
+
+    txb.moveCall({
+      target: `${this.#package}::${this.#volatileModule}::quote_add_liquidity`,
+      typeArguments: [pool.lpCoinType],
+      arguments: [
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        txb.pure(amounts),
+      ],
+    });
+
+    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+
+    invariant(result.length, 'Result is empty');
+    invariant(typeof result[0] === 'string', 'Invalid return type');
+
+    return BigInt(result[0]);
+  }
+
+  async quoteRemoveLiquidity({
+    pool: _pool,
+    amount,
+  }: QuoteRemoveLiquidityArgs): Promise<readonly bigint[]> {
+    let pool = _pool;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    if (!amount) return pool.coinTypes.map(() => 0n);
+
+    const txb = new TransactionBlock();
+
+    txb.moveCall({
+      target: `${this.#package}::${this.#volatileModule}::quote_remove_liquidity`,
+      typeArguments: [pool.lpCoinType],
+      arguments: [txb.object(pool.poolObjectId), txb.pure.u64(amount)],
+    });
+
+    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+
+    invariant(result.length, 'Result is empty');
+    invariant(Array.isArray(result[0]), 'Value is not an array');
+
+    return result[0].map(x => BigInt(x));
   }
 
   async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {
@@ -446,9 +570,9 @@ export class CLAMM {
     const coinDecimals = this.#coinDecimal
       ? txb.object(this.#coinDecimal)
       : txb.moveCall({
-        target: `${this.#suiTears}::coin_decimals::new`,
-        arguments: [cap],
-      });
+          target: `${this.#suiTears}::coin_decimals::new`,
+          arguments: [cap],
+        });
 
     if (this.#network === 'mainnet') {
       const metadataMap = await getCoinMetas(this.#client, typeArguments);
@@ -515,6 +639,18 @@ export class CLAMM {
     });
 
     return txb;
+  }
+
+  #coinValue(
+    txb: TransactionBlock,
+    coinIn: string | TransactionObjectArgument,
+    coinType: string,
+  ) {
+    return txb.moveCall({
+      target: '0x2::coin::value',
+      typeArguments: [coinType],
+      arguments: [this.#object(txb, coinIn)],
+    });
   }
 
   #object(txb: TransactionBlock, id: string | TransactionObjectArgument) {
