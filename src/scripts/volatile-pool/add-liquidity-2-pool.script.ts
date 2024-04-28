@@ -45,6 +45,7 @@ import {
       txb: initTxb,
       pool,
       coinsIn: [coinA, coinB],
+      minAmount,
     });
 
     txb.transferObjects([lpCoin], txb.pure(keypair.toSuiAddress()));

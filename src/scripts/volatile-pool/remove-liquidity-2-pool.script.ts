@@ -26,13 +26,13 @@ import {
       txb: initTxb,
       pool,
       lpCoin,
-      minAmounts,
     });
 
     txb.transferObjects(coinsOut, txb.pure(keypair.toSuiAddress()));
 
     const response = await executeTx(txb);
     log(response);
+    log(minAmounts);
   } catch (e) {
     console.log(e);
   }

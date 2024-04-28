@@ -6,6 +6,7 @@ import {
 import { isValidSuiObjectId, SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
 import { pathOr } from 'ramda';
 import invariant from 'tiny-invariant';
+import { bcs } from '@mysten/sui.js/bcs';
 
 import {
   AddLiquidityArgs,
@@ -319,6 +320,36 @@ export class CLAMM {
       `This pool has ${pool.coinTypes.length} coins, you only passed ${coinsIn.length}`,
     );
 
+    let min = undefined;
+
+    if (minAmount) {
+      min = txb.pure.u64(minAmount.toString());
+    } else {
+      let minAmounts = txb.moveCall({
+        target: '0x1::vector::empty',
+        typeArguments: [bcs.U64.name],
+      });
+
+      pool.coinTypes.forEach((coinType, index) => {
+        const value = this.#coinValue(txb, coinsIn[index], coinType);
+        txb.moveCall({
+          target: '0x1::vector::push_back',
+          typeArguments: [bcs.U64.name],
+          arguments: [minAmounts, value],
+        });
+      });
+
+      min = txb.moveCall({
+        target: `${this.#package}::${this.#volatileModule}::quote_add_liquidity`,
+        typeArguments: [pool.lpCoinType],
+        arguments: [
+          txb.object(pool.poolObjectId),
+          txb.object(SUI_CLOCK_OBJECT_ID),
+          minAmounts,
+        ],
+      });
+    }
+
     const moduleName =
       !pool.isStable && 'gamma' in pool.state
         ? this.#volatileModule
@@ -331,7 +362,7 @@ export class CLAMM {
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
         ...coinsIn.map(x => this.#object(txb, x)),
-        txb.pure.u64(minAmount),
+        min,
       ],
     });
 
@@ -355,14 +386,21 @@ export class CLAMM {
       pool = await this.getPool(pool);
     }
 
-    if (!minAmounts) minAmounts = pool.coinTypes.map(() => 0n);
+    let min = undefined;
+
+    if (minAmounts && minAmounts.length === pool.coinTypes.length) {
+      min = txb.pure(listToString(minAmounts));
+    } else {
+      let value = this.#coinValue(txb, lpCoin, pool.lpCoinType);
+
+      min = txb.moveCall({
+        target: `${this.#package}::${this.#volatileModule}::quote_remove_liquidity`,
+        typeArguments: [pool.lpCoinType],
+        arguments: [txb.object(pool.poolObjectId), value],
+      });
+    }
 
     const numOfCoins = pool.coinTypes.length;
-
-    invariant(
-      minAmounts.length === numOfCoins,
-      `You must provide the min amount for ${numOfCoins} coins`,
-    );
 
     const moduleName = pool.isStable
       ? this.#stableModule
@@ -373,13 +411,9 @@ export class CLAMM {
           txb.object(pool.poolObjectId),
           txb.object(SUI_CLOCK_OBJECT_ID),
           this.#object(txb, lpCoin),
-          txb.pure(listToString(minAmounts)),
+          min,
         ]
-      : [
-          txb.object(pool.poolObjectId),
-          this.#object(txb, lpCoin),
-          txb.pure(listToString(minAmounts)),
-        ];
+      : [txb.object(pool.poolObjectId), this.#object(txb, lpCoin), min];
 
     const result = txb.moveCall({
       target: `${this.#package}::${moduleName}::${REMOVE_LIQUIDITY_FUNCTION_NAME_MAP[numOfCoins]}`,
