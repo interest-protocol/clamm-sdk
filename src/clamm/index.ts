@@ -38,6 +38,9 @@ import {
   listToString,
 } from './utils';
 
+// Added this line to get all types into one file
+export * from './clamm.types.ts';
+
 export class CLAMM {
   #client: SuiClient;
   #package: string;
@@ -246,8 +249,8 @@ export class CLAMM {
 
     invariant(
       poolState.data &&
-        poolState.data.content &&
-        poolState.data.content.dataType === 'moveObject',
+      poolState.data.content &&
+      poolState.data.content.dataType === 'moveObject',
       'PoolState data not found',
     );
 
@@ -364,16 +367,16 @@ export class CLAMM {
 
     const args = pool.isStable
       ? [
-          txb.object(pool.poolObjectId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
-          this.#object(txb, lpCoin),
-          txb.pure(listToString(minAmounts)),
-        ]
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+        this.#object(txb, lpCoin),
+        txb.pure(listToString(minAmounts)),
+      ]
       : [
-          txb.object(pool.poolObjectId),
-          this.#object(txb, lpCoin),
-          txb.pure(listToString(minAmounts)),
-        ];
+        txb.object(pool.poolObjectId),
+        this.#object(txb, lpCoin),
+        txb.pure(listToString(minAmounts)),
+      ];
 
     const result = txb.moveCall({
       target: `${this.#package}::${moduleName}::${REMOVE_LIQUIDITY_FUNCTION_NAME_MAP[numOfCoins]}`,
@@ -443,9 +446,9 @@ export class CLAMM {
     const coinDecimals = this.#coinDecimal
       ? txb.object(this.#coinDecimal)
       : txb.moveCall({
-          target: `${this.#suiTears}::coin_decimals::new`,
-          arguments: [cap],
-        });
+        target: `${this.#suiTears}::coin_decimals::new`,
+        arguments: [cap],
+      });
 
     if (this.#network === 'mainnet') {
       const metadataMap = await getCoinMetas(this.#client, typeArguments);
