@@ -582,25 +582,26 @@ export class CLAMM {
     const [result] = await devInspectAndGetReturnValues(this.#client, txb);
 
     invariant(result.length, 'Result is empty');
-    invariant(Array.isArray(result[0]), 'Value is not an array');
-
-    const inner = result[0] as string[];
+    invariant(typeof result[0] === 'string', 'Value is not a string');
+    invariant(typeof result[1] === 'string', 'Value is not a string');
 
     if (!pool.isStable)
-      invariant(inner.length === 2, 'Failed to get volatile quote values');
+      invariant(result.length === 2, 'Failed to get volatile quote values');
 
-    if (pool.isStable)
-      invariant(inner.length === 3, 'Failed to get stable quote values');
+    if (pool.isStable) {
+      invariant(result.length === 3, 'Failed to get stable quote values');
+      invariant(typeof result[2] === 'string', 'Value is not a string');
+    }
 
     return pool.isStable
       ? {
-          amount: BigInt(inner[0]),
-          feeIn: BigInt(inner[1]),
-          feeOut: BigInt(inner[2]),
+          amount: BigInt(result[0]),
+          feeIn: BigInt(result[1]),
+          feeOut: BigInt(result[2] as string),
         }
       : {
-          amount: BigInt(inner[0]),
-          fee: BigInt(inner[1]),
+          amount: BigInt(result[0]),
+          fee: BigInt(result[1]),
         };
   }
 

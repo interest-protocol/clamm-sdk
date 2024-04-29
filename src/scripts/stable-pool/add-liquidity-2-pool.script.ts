@@ -36,6 +36,11 @@ import {
       ],
     });
 
+    const minAmount = await CLAMM.quoteAddLiquidity({
+      pool,
+      amounts: [10_000_000n, 10_000_000_000n],
+    });
+
     const { lpCoin, txb } = await CLAMM.addLiquidity({
       txb: initTxb,
       pool,
@@ -46,6 +51,7 @@ import {
 
     const response = await executeTx(txb);
     log(response);
+    console.log(minAmount);
   } catch (e) {
     console.log(e);
   }

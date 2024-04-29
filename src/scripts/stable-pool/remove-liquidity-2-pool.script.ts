@@ -17,6 +17,11 @@ import {
 
     const lpCoin = await getCoinOfValue(initTxb, pool.lpCoinType, 100_000_000n);
 
+    const minAmount = await CLAMM.quoteRemoveLiquidity({
+      pool,
+      amount: 100_000_000n,
+    });
+
     const { txb, coinsOut } = await CLAMM.removeLiquidity({
       txb: initTxb,
       pool,
@@ -26,6 +31,7 @@ import {
     txb.transferObjects(coinsOut, txb.pure(keypair.toSuiAddress()));
 
     const response = await executeTx(txb);
+    log(minAmount);
     log(response);
   } catch (e) {
     console.log(e);
