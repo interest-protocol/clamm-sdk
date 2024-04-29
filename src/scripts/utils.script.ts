@@ -276,22 +276,22 @@ export const sleep = async (ms = 0) =>
 export const PRECISION = 1000000000000000000n;
 
 export const STABLE_POOL_USDC_USDT_OBJECT_ID =
-  '0xaba1ea8dd79da0236001f91a46e35c624630c9063fbb837483613aec44a15288';
+  '0xe65fcdcf9d95d2ff1815bc89ce2c190c2d54be03e8937e63720bfa712cf22739';
 
 export const VOLATILE_POOL_USDC_BTC_OBJECT_ID =
-  '0x0f576fec03e56e7c9d0d1e2563a8fadb12e02cb55be80b7afa4e6d542b15472a';
+  '0x0d4b1961898658868c5ea10463c3bd49302280986fc1884e5a0851673554884b';
 
 export const STABLE_POOL_USDC_TREASURY_CAP =
-  '0x48a52eeacbfed8d9c30c20ef6fab4b3987986233fe56e85dfca2011a8a9a71e4';
+  '0x3b8fce41c5ef1d81f843de9234e539dfd006c9d4a6c25fc884b439012174980d';
 
 export const STABLE_POOL_USDT_TREASURY_CAP =
-  '0x9f21f074c7645c71ad614007abfb2333ed02a6f7841707bcb07e97f1d4802819';
+  '0xdcee0c070f60a45e155ff97b6bb6a86f70be46f7313be4924b468cc627d763b4';
 
 export const VOLATILE_POOL_USDC_TREASURY_CAP =
-  '0x6e7a09318227641aac984361e6fa2f899ff5ec435acbbb56431ab05111ca7661';
+  '0xebb28c8e7d27639eaa749d03de6da18b32da4f0ce8372ee03d0c9938a6b5a4a4';
 
 export const VOLATILE_POOL_BTC_TREASURY_CAP =
-  '0x13700769e1fe3fe7d9830ae3c9d5340d62cd42f05a1ccf5630fadd158c3693d7';
+  '0x9b28ba53be08d6a3d04c69594eadde70f231d411fce1268e2dcd91a56d272797';
 
 export function removeLeadingZeros(address: string): string {
   return (address as any).replaceAll(/0x0+/g, '0x');

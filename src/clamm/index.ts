@@ -37,7 +37,6 @@ import {
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
 } from './constants';
 import {
-  createCoinStateMap,
   devInspectAndGetReturnValues,
   getCoinMetas,
   listToString,
@@ -279,29 +278,15 @@ export class CLAMM {
       } as StablePool;
     }
 
-    const { lpCoinType, state, coinStatesId } = parseVolatileV1State(
+    const { lpCoinType, state } = parseVolatileV1State(
       poolState.data.content.fields,
     );
-
-    const coinStatesFields = await this.#client.getDynamicFields({
-      parentId: coinStatesId,
-    });
-
-    const coinStates = await this.#client.multiGetObjects({
-      ids: coinStatesFields.data.map(x => x.objectId),
-      options: {
-        showContent: true,
-      },
-    });
 
     return {
       poolAdminAddress,
       poolObjectId,
       coinTypes,
-      state: {
-        ...state,
-        coinStateMap: createCoinStateMap(coinStates),
-      },
+      state,
       lpCoinType,
       isStable,
       stateId,

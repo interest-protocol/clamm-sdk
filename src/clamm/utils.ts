@@ -4,7 +4,6 @@ import {
   MoveStruct,
   SuiClient,
   SuiExecutionResult,
-  SuiObjectResponse,
 } from '@mysten/sui.js/client';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { normalizeStructTag, normalizeSuiAddress } from '@mysten/sui.js/utils';
@@ -114,11 +113,7 @@ export const parseVolatileV1State = (struct: MoveStruct) => {
     .split('Supply<')[1]
     .slice(0, -1);
 
-  const coinStatesId = pathOr(
-    '',
-    ['coin_states', 'fields', 'id', 'id'],
-    fields,
-  );
+  const coinStates = pathOr([], ['coin_states', 'fields', 'contents'], fields);
 
   const state = {
     a: BigInt(pathOr(0n, ['a_gamma', 'fields', 'a'], fields)),
@@ -164,42 +159,36 @@ export const parseVolatileV1State = (struct: MoveStruct) => {
       midFee: BigInt(pathOr(0n, ['fees', 'fields', 'mid_fee'], fields)),
       outFee: BigInt(pathOr(0n, ['fees', 'fields', 'out_fee'], fields)),
     },
-  };
+    coinStateMap: createCoinStateMap(coinStates),
+  } as VolatilePoolState;
 
   return {
     state,
     lpCoinType,
-    coinStatesId,
   };
 };
 
-export const createCoinStateMap = (response: SuiObjectResponse[]) => {
-  const fields = response.map(x =>
-    path(['data', 'content', 'fields', 'value', 'fields'], x),
-  );
-
-  const map = fields.reduce(
-    (acc: VolatilePoolState['coinStateMap'], elem) => {
+export const createCoinStateMap = (struct: MoveStruct[]) =>
+  struct.reduce(
+    (acc: VolatilePoolState['coinStateMap'], elem: Record<string, any>) => {
+      const content = path(['fields', 'value'], elem);
       const type = normalizeSuiCoinType(
-        path(['type_name', 'fields', 'name'], elem) as string,
+        path(['fields', 'type_name', 'fields', 'name'], content) as string,
       );
 
       return {
         ...acc,
         [type]: {
           type,
-          index: +pathOr(0, ['index'], elem),
-          lastPrice: BigInt(pathOr(0n, ['last_price'], elem)),
-          price: BigInt(pathOr(0n, ['price'], elem)),
-          priceOracle: BigInt(pathOr(0n, ['price_oracle'], elem)),
+          index: +pathOr(0, ['fields', 'index'], content),
+          lastPrice: BigInt(pathOr(0n, ['fields', 'last_price'], content)),
+          price: BigInt(pathOr(0n, ['fields', 'price'], content)),
+          priceOracle: BigInt(pathOr(0n, ['fields', 'price_oracle'], content)),
         },
       };
     },
     {} as VolatilePoolState['coinStateMap'],
   );
-
-  return map;
-};
 
 async function devInspectAndGetResults(
   suiClient: SuiClient,
