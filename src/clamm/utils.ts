@@ -73,7 +73,7 @@ export async function getCoinMetas(
 }
 
 export const parseStableV1State = (struct: MoveStruct) => {
-  const fields = path(['value', 'fields'], struct) as any;
+  const fields = path(['value', 'fields'], struct) as Record<string, any>;
   const lpCoinType = pathOr('', ['lp_coin_supply', 'type'], fields)
     .split('Supply<')[1]
     .slice(0, -1);
@@ -109,7 +109,7 @@ export const parseStableV1State = (struct: MoveStruct) => {
 };
 
 export const parseVolatileV1State = (struct: MoveStruct) => {
-  const fields = path(['value', 'fields'], struct) as any;
+  const fields = path(['value', 'fields'], struct) as Record<string, any>;
   const lpCoinType = pathOr('', ['lp_coin_supply', 'type'], fields)
     .split('Supply<')[1]
     .slice(0, -1);

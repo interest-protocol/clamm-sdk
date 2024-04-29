@@ -590,7 +590,7 @@ export class CLAMM {
       arguments: [
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
-        txb.pure.u64(amount),
+        txb.pure.u64(amount.toString()),
       ],
     });
 
@@ -644,7 +644,7 @@ export class CLAMM {
       arguments: [
         txb.object(pool.poolObjectId),
         txb.object(SUI_CLOCK_OBJECT_ID),
-        txb.pure(amounts),
+        txb.pure(listToString(amounts)),
       ],
     });
 

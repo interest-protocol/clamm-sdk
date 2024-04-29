@@ -8,7 +8,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['src/scripts/template/**'],
+    ignores: ['src/scripts/**', 'dist/**'],
   },
   {
     plugins: {
@@ -17,6 +17,7 @@ export default tseslint.config(
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 );
