@@ -55,7 +55,6 @@ export class CLAMM {
   #poolModule = 'interest_pool' as const;
   #volatileModule = 'interest_clamm_volatile' as const;
   #stableModule = 'interest_clamm_stable' as const;
-  #coinDecimal: string | null;
   #stableA = 1500n;
   #volatileA = 400000n;
   #gamma = 145000000000000n;
@@ -89,12 +88,10 @@ export class CLAMM {
     suiClient,
     suiTearsAddress,
     network,
-    coinDecimalAddress = null,
   }: ClammConstructor) {
     this.#client = suiClient;
     this.#package = packageAddress;
     this.#suiTears = suiTearsAddress;
-    this.#coinDecimal = coinDecimalAddress;
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
     this.#network = network;
@@ -765,12 +762,10 @@ export class CLAMM {
       target: `${this.#suiTears}::coin_decimals::new_cap`,
     });
 
-    const coinDecimals = this.#coinDecimal
-      ? txb.object(this.#coinDecimal)
-      : txb.moveCall({
-          target: `${this.#suiTears}::coin_decimals::new`,
-          arguments: [cap],
-        });
+    const coinDecimals = txb.moveCall({
+      target: `${this.#suiTears}::coin_decimals::new`,
+      arguments: [cap],
+    });
 
     if (this.#network === 'mainnet') {
       const metadataMap = await getCoinMetas(this.#client, typeArguments);

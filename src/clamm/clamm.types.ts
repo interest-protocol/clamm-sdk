@@ -15,7 +15,6 @@ export interface ClammConstructor {
   packageAddress: string;
   suiTearsAddress: string;
   network: 'testnet' | 'mainnet' | 'devnet';
-  coinDecimalAddress?: string | null;
 }
 
 export type CoinMeta = CoinMetadata & {
