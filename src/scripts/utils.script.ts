@@ -97,7 +97,7 @@ const updateTreasuryCapRecipient = (
     'Address',
   );
 
-export const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+export const client = new SuiClient({ url: getFullnodeUrl('mainnet') });
 
 invariant(process.env.CLAMM && process.env.SUI_TEARS, 'env not set');
 
@@ -105,7 +105,7 @@ export const CLAMM = new CLAMM_({
   suiClient: client,
   packageAddress: process.env.CLAMM,
   suiTearsAddress: process.env.SUI_TEARS,
-  network: 'testnet',
+  network: 'mainnet',
 });
 
 interface GetByteCodeArgs {

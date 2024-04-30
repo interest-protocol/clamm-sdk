@@ -72,6 +72,17 @@ export class CLAMM {
   PRECISION = 1000000000000000000n;
   LP_COIN_DECIMALS = 9;
   LP_COIN_DECIMALS_SCALAR = 1_000_000_000n;
+  // Max Stable Pool Values
+  STABLE_MAX_A_VALUE = 1_000_000n;
+  STABLE_MAX_A_CHANGE = 10n;
+  STABLE_MIN_RAMP_TIME = 86_400_000n;
+  // Max Volatile Pool Values
+  MIN_FEE = 5n * 100_000n;
+  MAX_FEE = 10n * 1_000_000_000n;
+  MAX_MA_HALF_TIME = 7n * 86400000n;
+  MAX_ADMIN_FEE = 10000000000n;
+  MIN_GAMMA = 10_000_000_000n;
+  MAX_GAMMA = 10_000_000_000_000_000n;
 
   constructor({
     packageAddress,
@@ -117,6 +128,10 @@ export class CLAMM {
     invariant(
       typeArguments.length === coins.length + 1 && typeArguments.length >= 3,
       'Type arguments and coin mismatch',
+    );
+    invariant(
+      this.STABLE_MAX_A_VALUE > a,
+      `A value must be lower than: ${this.STABLE_MAX_A_VALUE}`,
     );
 
     const supply = this.#treasuryIntoSupply(
@@ -172,6 +187,30 @@ export class CLAMM {
       'Type arguments and coin mismatch',
     );
     invariant(prices.length > 0, 'You must provide prices');
+    invariant(
+      this.MAX_FEE > midFee,
+      `Mid Fee must be lower than: ${this.MAX_FEE}`,
+    );
+    invariant(
+      this.MAX_FEE > outFee,
+      `Out Fee must be lower than: ${this.MAX_FEE}`,
+    );
+    invariant(
+      !!gammaFee && this.PRECISION >= gammaFee,
+      `Gamma fee must be lower of equal to: ${this.PRECISION}`,
+    );
+    invariant(
+      this.PRECISION > extraProfit,
+      `Extra profit must be lower of equal to: ${this.PRECISION}`,
+    );
+    invariant(
+      this.PRECISION > adjustmentStep,
+      `Adjustment step must be lower of equal to: ${this.PRECISION}`,
+    );
+    invariant(
+      maHalfTime > 1000 && this.MAX_MA_HALF_TIME >= maHalfTime,
+      `Ma half time must be lower than: ${this.MAX_MA_HALF_TIME}`,
+    );
 
     const supply = this.#treasuryIntoSupply(
       txb,
