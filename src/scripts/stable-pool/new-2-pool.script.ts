@@ -1,13 +1,14 @@
+import { TransactionBlock } from '@mysten/sui.js/transactions';
 import invariant from 'tiny-invariant';
 
 import {
   CLAMM,
-  createCoin,
   createLPCoin,
   executeTx,
   keypair,
   log,
   sleep,
+  COINS,
 } from '../utils.script';
 
 (async () => {
@@ -24,45 +25,40 @@ import {
 
     await sleep(3000);
 
-    const usdcData = await createCoin({
-      name: 'USD Coin',
-      symbol: 'USDC',
-      decimals: 6,
-      totalSupply: 6_000_000n,
-      imageUrl:
-        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdc.png/public',
-      recipient: keypair.toSuiAddress(),
-      description: 'Circle Stable coin',
-    });
-
-    await sleep(3000);
-
-    const usdtData = await createCoin({
-      name: 'USD Tether',
-      symbol: 'USDT',
-      decimals: 9,
-      totalSupply: 6_000_000n,
-      imageUrl:
-        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdt.png/public',
-      recipient: keypair.toSuiAddress(),
-      description: 'First crypto ever',
-    });
-
     invariant(
       lpCoinData.treasuryCap && lpCoinData.coinType,
       'LpCoin Cap not found',
     );
-    invariant(usdcData.coin && usdcData.coinType, 'Failed to create USDC');
-    invariant(usdtData.coin && usdtData.coinType, 'Failed to create USDT');
 
-    await sleep(3000);
+    const initTxb = new TransactionBlock();
+
+    // USDC has 6 decimals
+    const coinUSDC = initTxb.moveCall({
+      target: '0x2::coin::mint',
+      typeArguments: [COINS.usdc.coinType],
+      arguments: [
+        initTxb.object(COINS.usdc.treasuryCap),
+        initTxb.pure(1_000_000_000_000n),
+      ],
+    });
+
+    // USDT has 9 decimals
+    const coinUSDT = initTxb.moveCall({
+      target: '0x2::coin::mint',
+      typeArguments: [COINS.usdt.coinType],
+      arguments: [
+        initTxb.object(COINS.usdt.treasuryCap),
+        initTxb.pure(1_000_000_000_000_000n),
+      ],
+    });
 
     let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newStable({
-      coins: [usdcData.coin, usdtData.coin],
+      txb: initTxb,
+      coins: [coinUSDC, coinUSDT],
       lpCoinTreasuryCap: lpCoinData.treasuryCap,
       typeArguments: [
-        usdcData.coinType,
-        usdtData.coinType,
+        COINS.usdc.coinType,
+        COINS.usdt.coinType,
         lpCoinData.coinType,
       ],
     });

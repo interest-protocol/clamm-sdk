@@ -1,8 +1,9 @@
+import { TransactionBlock } from '@mysten/sui.js/transactions';
 import invariant from 'tiny-invariant';
 
 import {
   CLAMM,
-  createCoin,
+  COINS,
   createLPCoin,
   executeTx,
   keypair,
@@ -14,8 +15,8 @@ import {
 (async () => {
   try {
     const lpCoinData = await createLPCoin({
-      name: 'BTC/USDT',
-      symbol: 'ipx-v-btc-usdt',
+      name: 'USDC/ETH',
+      symbol: 'ipx-v-usdc-eth',
       decimals: 9,
       totalSupply: 0n,
       imageUrl: 'https://www.interestprotocol.com/',
@@ -23,46 +24,45 @@ import {
       description: 'CLAMM Interest Protocol LpCoin',
     });
 
-    await sleep(3000);
-
-    const usdcData = await createCoin({
-      name: 'USD Coin',
-      symbol: 'USDC',
-      decimals: 6,
-      totalSupply: 6_500_000n,
-      imageUrl:
-        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdc.png/public',
-      recipient: keypair.toSuiAddress(),
-      description: 'Circle Stable coin',
-    });
-
-    await sleep(3000);
-
-    const btcData = await createCoin({
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      decimals: 9,
-      totalSupply: 100n,
-      imageUrl:
-        'https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/wbtc.png/public',
-      recipient: keypair.toSuiAddress(),
-      description: 'First crypto ever',
-    });
-
     invariant(
       lpCoinData.treasuryCap && lpCoinData.coinType,
       'LpCoin Cap not found',
     );
-    invariant(usdcData.coin && usdcData.coinType, 'Failed to create USDC');
-    invariant(btcData.coin && btcData.coinType, 'Failed to create BTC');
 
     await sleep(3000);
 
+    const initTxb = new TransactionBlock();
+
+    // USDC has 6 decimals
+    const coinUSDC = initTxb.moveCall({
+      target: '0x2::coin::mint',
+      typeArguments: [COINS.usdc.coinType],
+      arguments: [
+        initTxb.object(COINS.usdc.treasuryCap),
+        initTxb.pure(1_000_000_000_000n),
+      ],
+    });
+
+    // ETH has 9 decimals
+    const coinETH = initTxb.moveCall({
+      target: '0x2::coin::mint',
+      typeArguments: [COINS.eth.coinType],
+      arguments: [
+        initTxb.object(COINS.eth.treasuryCap),
+        initTxb.pure(333_000_000_000n),
+      ],
+    });
+
     let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newVolatile({
-      coins: [usdcData.coin, btcData.coin],
+      txb: initTxb,
+      coins: [coinUSDC, coinETH],
       lpCoinTreasuryCap: lpCoinData.treasuryCap,
-      typeArguments: [usdcData.coinType, btcData.coinType, lpCoinData.coinType],
-      prices: [65_000n * PRECISION],
+      typeArguments: [
+        COINS.usdc.coinType,
+        COINS.eth.coinType,
+        lpCoinData.coinType,
+      ],
+      prices: [3_000n * PRECISION],
     });
 
     txb.transferObjects([poolAdmin, lpCoin], txb.pure(keypair.toSuiAddress()));

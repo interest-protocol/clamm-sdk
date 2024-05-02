@@ -5,24 +5,23 @@ import {
   executeTx,
   keypair,
   log,
-  VOLATILE_POOL_BTC_TREASURY_CAP,
-  VOLATILE_POOL_USDC_BTC_OBJECT_ID,
-  VOLATILE_POOL_USDC_TREASURY_CAP,
+  COINS,
+  VOLATILE_POOL_USDC_ETH_OBJECT_ID,
 } from '../utils.script';
 
 (async () => {
   try {
-    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_BTC_OBJECT_ID);
+    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_ETH_OBJECT_ID);
 
     const initTxb = new TransactionBlock();
 
-    // USDC has 6 decimals
+    // USDT has 9 decimals
     const coinA = initTxb.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[0]],
       arguments: [
-        initTxb.object(VOLATILE_POOL_USDC_TREASURY_CAP),
-        initTxb.pure(65_000_000_000n),
+        initTxb.object(COINS.usdc.treasuryCap),
+        initTxb.pure(3_000_000_000n),
       ],
     });
 
@@ -31,14 +30,14 @@ import {
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[1]],
       arguments: [
-        initTxb.object(VOLATILE_POOL_BTC_TREASURY_CAP),
+        initTxb.object(COINS.eth.treasuryCap),
         initTxb.pure(1_000_000_000n),
       ],
     });
 
     const minAmount = await CLAMM.quoteAddLiquidity({
       pool,
-      amounts: [65_000_000_000n, 1_000_000_000n],
+      amounts: [3_000_000_000n, 1_000_000_000n],
     });
 
     const { lpCoin, txb } = await CLAMM.addLiquidity({

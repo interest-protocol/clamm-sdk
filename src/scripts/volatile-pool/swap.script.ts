@@ -5,21 +5,21 @@ import {
   executeTx,
   keypair,
   log,
-  VOLATILE_POOL_USDC_BTC_OBJECT_ID,
-  VOLATILE_POOL_USDC_TREASURY_CAP,
+  VOLATILE_POOL_USDC_ETH_OBJECT_ID,
+  COINS,
 } from '../utils.script';
 
 (async () => {
   try {
-    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_BTC_OBJECT_ID);
+    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_ETH_OBJECT_ID);
 
     const initTxb = new TransactionBlock();
     const coinIn = initTxb.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[0]],
       arguments: [
-        initTxb.object(VOLATILE_POOL_USDC_TREASURY_CAP),
-        initTxb.pure(10_000_000_000n),
+        initTxb.object(COINS.usdc.treasuryCap),
+        initTxb.pure(100_000_000n),
       ],
     });
 
@@ -27,7 +27,7 @@ import {
       pool,
       coinInType: pool.coinTypes[0],
       coinOutType: pool.coinTypes[1],
-      amount: 10_000_000_000n,
+      amount: 100_000_000n,
     });
 
     const { coinOut, txb } = await CLAMM.swap({

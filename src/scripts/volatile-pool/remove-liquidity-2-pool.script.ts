@@ -6,12 +6,12 @@ import {
   getCoinOfValue,
   keypair,
   log,
-  VOLATILE_POOL_USDC_BTC_OBJECT_ID,
+  VOLATILE_POOL_USDC_ETH_OBJECT_ID,
 } from '../utils.script';
 
 (async () => {
   try {
-    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_BTC_OBJECT_ID);
+    const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_ETH_OBJECT_ID);
 
     const initTxb = new TransactionBlock();
 

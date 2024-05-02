@@ -21,6 +21,8 @@
     "access": "public"
   },
   "scripts": {
+    "new-coins": "npx ts-node ./src/scripts/new-coins.script.ts",
+    "update-metadata": "npx ts-node ./src/scripts/new-coins.script.ts",
     "new-stable-2-pool": "npx ts-node ./src/scripts/stable-pool/new-2-pool.script.ts",
     "new-volatile-2-pool": "npx ts-node ./src/scripts/volatile-pool/new-2-pool.script.ts",
     "stable-add-liquidity-2-pool": "npx ts-node ./src/scripts/stable-pool/add-liquidity-2-pool.script.ts",

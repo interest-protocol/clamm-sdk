@@ -5,7 +5,7 @@ import {
   executeTx,
   keypair,
   log,
-  STABLE_POOL_USDC_TREASURY_CAP,
+  COINS,
   STABLE_POOL_USDC_USDT_OBJECT_ID,
 } from '../utils.script';
 
@@ -18,9 +18,9 @@ import {
     // USDC has 6 decimals
     const coinIn = initTxb.moveCall({
       target: '0x2::coin::mint',
-      typeArguments: [pool.coinTypes[0]],
+      typeArguments: [COINS.usdc.coinType],
       arguments: [
-        initTxb.object(STABLE_POOL_USDC_TREASURY_CAP),
+        initTxb.object(COINS.usdc.treasuryCap),
         initTxb.pure(10_000_000n),
       ],
     });
