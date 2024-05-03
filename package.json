@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "4.1.0-alpha",
+  "version": "4.2.0-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
@@ -33,6 +33,7 @@
     "volatile-remove-liquidity-one-coin-2-pool": "npx ts-node ./src/scripts/stable-pool/remove-liquidity-one-coin.script.ts",
     "stable-swap": "npx ts-node ./src/scripts/stable-pool/swap.script.ts",
     "volatile-swap": "npx ts-node ./src/scripts/volatile-pool/swap.script.ts",
+    "get-pools": "npx ts-node ./src/scripts/get-pools.script.ts",
     "lint": "npx eslint . --fix",
     "clean": "rimraf dist && rimraf tsconfig.prod.tsbuildinfo && rimraf tsconfig.tsbuildinfo",
     "build:tsup": "tsup --format esm,cjs --sourcemap",

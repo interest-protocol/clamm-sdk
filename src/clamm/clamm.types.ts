@@ -146,13 +146,27 @@ export interface QuoteRemoveLiquidityArgs {
   amount: bigint;
 }
 
-interface Pool<T> {
+export interface PoolMetadata {
   poolObjectId: string;
   stateId: string;
   lpCoinType: string;
   isStable: boolean;
   coinTypes: readonly string[];
-  poolAdminAddress: string;
+}
+
+export interface QueryPoolsArgs {
+  page?: number;
+  pageSize?: number;
+  coinTypes?: readonly string[];
+}
+
+export interface QueryPoolsReturn {
+  pools: readonly PoolMetadata[];
+  totalPages: number | null | undefined;
+}
+
+interface Pool<T> extends PoolMetadata {
+  poolAdminAddress?: string;
   state: T;
 }
 

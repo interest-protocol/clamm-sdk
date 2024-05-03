@@ -30,6 +30,9 @@ import {
   SwapArgs,
   SwapReturn,
   VolatilePool,
+  QueryPoolsArgs,
+  QueryPoolsReturn,
+  PoolMetadata,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -65,6 +68,7 @@ export class CLAMM {
   #outFee = 45000000n;
   #gammaFee = 230000000000000n;
   #network: ClammConstructor['network'];
+  #END_POINT = 'https://www.suicoins.com/api/';
   stableType: string;
   volatileType: string;
   // 1e18
@@ -95,6 +99,29 @@ export class CLAMM {
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
     this.#network = network;
+  }
+
+  async getPools(args?: QueryPoolsArgs): Promise<QueryPoolsReturn> {
+    let { page = 1, pageSize = 50, coinTypes = [] } = args ? args : {};
+
+    if (coinTypes && coinTypes.length) {
+      console.log(`get-clamm-pools-by-types?coinTypes=${coinTypes.toString()}`);
+      const pools = await this.#fetch<readonly PoolMetadata[]>(
+        `get-clamm-pools-by-types?coinTypes=${coinTypes.toString()}`,
+      );
+
+      return {
+        pools,
+        totalPages: null,
+      };
+    }
+
+    const safePage = !page ? 1 : page;
+    console.log(pageSize);
+
+    return this.#fetch<QueryPoolsReturn>(
+      `get-all-clamm-pools?page=${safePage}&limit=${pageSize}`,
+    );
   }
 
   shareStablePool({ txb, pool }: SharePoolArgs) {
@@ -327,6 +354,46 @@ export class CLAMM {
       isStable,
       stateId,
     } as VolatilePool;
+  }
+
+  async getPoolsFromMetadata(
+    pools: readonly PoolMetadata[],
+  ): Promise<readonly InterestPool[]> {
+    const states = await this.#client.multiGetObjects({
+      ids: pools.map(x => x.stateId),
+      options: { showContent: true, showType: true },
+    });
+
+    return states.map((elem, index) => {
+      invariant(
+        elem.data &&
+          elem.data.content &&
+          elem.data.content.dataType === 'moveObject',
+        'State data not found',
+      );
+      const poolMetadata = pools[index];
+
+      if (poolMetadata.isStable) {
+        const { lpCoinType, state } = parseStableV1State(
+          elem.data.content.fields,
+        );
+        return {
+          ...poolMetadata,
+          state,
+          lpCoinType,
+        } as StablePool;
+      }
+
+      const { lpCoinType, state } = parseVolatileV1State(
+        elem.data.content.fields,
+      );
+
+      return {
+        ...poolMetadata,
+        state,
+        lpCoinType,
+      } as VolatilePool;
+    });
   }
 
   async addLiquidity({
@@ -844,6 +911,16 @@ export class CLAMM {
       typeArguments: [coinType],
       arguments: [this.#object(txb, coinIn)],
     });
+  }
+
+  async #fetch<T>(api: string) {
+    const response = await fetch(`${this.#END_POINT}${api}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return (await response.json()) as T;
   }
 
   #object(txb: TransactionBlock, id: string | TransactionObjectArgument) {
