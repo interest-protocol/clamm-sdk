@@ -2,7 +2,7 @@ import { createCoin, keypair, log, sleep } from './utils.script';
 
 (async () => {
   try {
-    const usdtData = await createCoin({
+    const usdt = await createCoin({
       name: 'USD Tether',
       symbol: 'USDT',
       decimals: 9,
@@ -15,7 +15,7 @@ import { createCoin, keypair, log, sleep } from './utils.script';
 
     await sleep(3000);
 
-    const usdcData = await createCoin({
+    const usdc = await createCoin({
       name: 'USD Coin',
       symbol: 'USDC',
       decimals: 6,
@@ -28,7 +28,7 @@ import { createCoin, keypair, log, sleep } from './utils.script';
 
     await sleep(3000);
 
-    const ethData = await createCoin({
+    const eth = await createCoin({
       name: 'Ether',
       symbol: 'ETH',
       decimals: 9,
@@ -41,7 +41,7 @@ import { createCoin, keypair, log, sleep } from './utils.script';
 
     await sleep(3000);
 
-    const btcData = await createCoin({
+    const btc = await createCoin({
       name: 'Bitcoin',
       symbol: 'BTC',
       decimals: 9,
@@ -53,10 +53,10 @@ import { createCoin, keypair, log, sleep } from './utils.script';
     });
 
     log({
-      usdcData,
-      usdtData,
-      ethData,
-      btcData,
+      usdc,
+      usdt,
+      eth,
+      btc,
     });
   } catch (e) {
     console.log(e);

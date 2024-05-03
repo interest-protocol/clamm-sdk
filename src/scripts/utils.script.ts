@@ -278,47 +278,47 @@ export const PRECISION = 1000000000000000000n;
 export const COINS = {
   usdc: {
     treasuryCap:
-      '0x5db34034c8c60cb3cf68912c8747b954d053f51a8bde72ff7e8ba451ef9a1984',
+      '0x51c3deed5f0be30b0a4c9059248e5a7f90fb03eb24e005e075ddbc51d2eaac51',
     coinMetadata:
-      '0x0d2365b2f52a687fae5381740828f710d478e397f8d7dd686bd1aa67539669d2',
-    coin: '0x2b34e7f156574c4f3942bf274b5a875fdd195fe2d30d845f92b891d2c9a38ae4',
+      '0xc3fc2bc563d8fd3bd5e82f774684a2918248c643166d0cc42a641597ecff1c39',
+    coin: '0x4b57613e20b036c77bf025a5698e284badfc18da845f593e117fbec4adc51115',
     coinType:
-      '0x53f41c044085889144f60a1b3a320438ccf201d84809acc7f264e69d3964155d::usdc::USDC',
+      '0x483a90eb70bf8f69bea1f7acdf387de0c251adfc019feceb5cf1bf5c60ebfc23::usdc::USDC',
   },
   usdt: {
     treasuryCap:
-      '0x51a332fcb2a1a287eb94097ce4247ec08e50aabbae7316e583f6e7a128b30d7b',
+      '0xafd3b165e3cbdbf9eeae0c4897b7912e93017b582fbe89303f9f0d5c6cca066d',
     coinMetadata:
-      '0x3731fc126a470dbf50a8d86d4ae38d0c1d6f32b85523363ebd07d9aabbf5fa27',
-    coin: '0x9ad35aaf25c6c09dab9ce4550e1b907bf7f965c6d3171e32fd4b322662862b83',
+      '0x28e99a1f3e9de115e5e11889b8f6a582aeb79d7fa7a6238643608ead843487db',
+    coin: '0x180f9b8f0b279c03da576375d3154a15379914142031bcf6e83003372b15506c',
     coinType:
-      '0x376b399e4ec81dcba2c5cd445a43ae12f7038775c13809a3436976da7b9f2cbe::usdt::USDT',
+      '0x36668f22225d8d7fa053321f205e430fe7f80ce7919612b2c0094f961e4db75d::usdt::USDT',
   },
   eth: {
     treasuryCap:
-      '0x499c5ee62df28c3570eeb0f13eec7abb12ce2ffcee2d3075ad1ce7189a8872e4',
+      '0xac21fa7f4b1a68938fe1cefd7afeb6d9df3fd5b0a72c0f33b87ad72901464b6f',
     coinMetadata:
-      '0x80586f28fb14e1cd4887d0e3435917fe2231cd5f8f84cf82f364dc4593f20bd9',
-    coin: '0xb413ce87ecab0d0d02e64de769e42df2046ddfe17a9317053f7cc2a5adf6ad09',
+      '0x2138b576aac479f03b8274a92e99ad3d9314b3218bfa8285061be0cfbe12f355',
+    coin: '0x185366c4dfd8a600a5828ca2223b68288968c0e520e1fabf27906a2829092855',
     coinType:
-      '0x4717654d925e3c0e8b81ace0b5101dcb050759b12ffea83e07acda8a34a2e9d5::eth::ETH',
+      '0x02dbca9476d5392e55d4cd689121172e37e23818a8650ba86bab7d095e1d5261::eth::ETH',
   },
   btc: {
     treasuryCap:
-      '0x5d792169da465f49109f8bc73d0626712d9e7df54f8d015e3f5938ae5ad5298c',
+      '0xf3fbfdc74eb767df9aaa667b50c63c4b1e8893db89973ad6c2eceb49129e103a',
     coinMetadata:
-      '0x50a2f8ca62fe64735ea71b3a9df4d6f7e2436e0a4d9bfe42e216633560f3d1bf',
-    coin: '0xf1c141609f066cb5be88e06047477cc05145ebbe2220e7a5479f9e2548e7b82d',
+      '0xacb3743c2c6cf13b4e2fa619391a21a85c360074732c41a02624beaf8adaacf9',
+    coin: '0x8e62fce7279b04fe44be4c2b896c473d79a8d519bb982c1f507dadcba436db16',
     coinType:
-      '0x577b6e91fb03f83c10db1cf2636578509db3ee674f20a65a687d5225c16dca22::btc::BTC',
+      '0xa78e1a10d4fa677d5a5d86554b0e49348cf8302f1c53941f4bf58b67881e5128::btc::BTC',
   },
 };
 
 export const STABLE_POOL_USDC_USDT_OBJECT_ID =
-  '0xf3534fe2e25795e3349df37518f1bf4afc9cb488317b6077acd37bec8b23997c';
+  '0xa4e8bae2be2cc2e8c6e9530730fb545e042d3844c0db338730eb4c211fdfcb5c';
 
 export const VOLATILE_POOL_USDC_ETH_OBJECT_ID =
-  '0x48fbd91885f3c59e1a5d24b61030d535f9bba5d0319cf5883072c9095c20fdb0';
+  '0xb68e3b000202ca33709827de26e08451a21e11c776ff44662c9c361589138eb7';
 
 export function removeLeadingZeros(address: string): string {
   return (address as any).replaceAll(/0x0+/g, '0x');
