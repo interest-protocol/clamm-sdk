@@ -873,6 +873,7 @@ export class CLAMM {
 
   async #fetch<T>(api: string) {
     const response = await fetch(`${this.#END_POINT}${api}`, {
+      mode: 'cors',
       headers: {
         'Content-Type': 'application/json',
       },
