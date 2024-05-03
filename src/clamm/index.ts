@@ -105,7 +105,6 @@ export class CLAMM {
     let { page = 1, pageSize = 50, coinTypes = [] } = args ? args : {};
 
     if (coinTypes && coinTypes.length) {
-      console.log(`get-clamm-pools-by-types?coinTypes=${coinTypes.toString()}`);
       const pools = await this.#fetch<readonly PoolMetadata[]>(
         `get-clamm-pools-by-types?coinTypes=${coinTypes.toString()}`,
       );
@@ -117,7 +116,6 @@ export class CLAMM {
     }
 
     const safePage = !page ? 1 : page;
-    console.log(pageSize);
 
     return this.#fetch<QueryPoolsReturn>(
       `get-all-clamm-pools?page=${safePage}&limit=${pageSize}`,
@@ -354,46 +352,6 @@ export class CLAMM {
       isStable,
       stateId,
     } as VolatilePool;
-  }
-
-  async getPoolsFromMetadata(
-    pools: readonly PoolMetadata[],
-  ): Promise<readonly InterestPool[]> {
-    const states = await this.#client.multiGetObjects({
-      ids: pools.map(x => x.stateId),
-      options: { showContent: true, showType: true },
-    });
-
-    return states.map((elem, index) => {
-      invariant(
-        elem.data &&
-          elem.data.content &&
-          elem.data.content.dataType === 'moveObject',
-        'State data not found',
-      );
-      const poolMetadata = pools[index];
-
-      if (poolMetadata.isStable) {
-        const { lpCoinType, state } = parseStableV1State(
-          elem.data.content.fields,
-        );
-        return {
-          ...poolMetadata,
-          state,
-          lpCoinType,
-        } as StablePool;
-      }
-
-      const { lpCoinType, state } = parseVolatileV1State(
-        elem.data.content.fields,
-      );
-
-      return {
-        ...poolMetadata,
-        state,
-        lpCoinType,
-      } as VolatilePool;
-    });
   }
 
   async addLiquidity({

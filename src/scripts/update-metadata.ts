@@ -1,5 +1,5 @@
 import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { keypair, log, sleep, executeTx } from './utils.script';
+import { log, executeTx } from './utils.script';
 
 (async () => {
   try {
