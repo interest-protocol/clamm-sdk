@@ -33,6 +33,7 @@ import {
   QueryPoolsArgs,
   QueryPoolsReturn,
   PoolMetadata,
+  PoolData,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -101,7 +102,20 @@ export class CLAMM {
     this.#network = network;
   }
 
-  async getPools(args?: QueryPoolsArgs): Promise<QueryPoolsReturn> {
+  async getPools(
+    args?: QueryPoolsArgs,
+  ): Promise<QueryPoolsReturn<InterestPool>> {
+    const { pools, totalPages } = await this.getPoolsMetadata(args);
+
+    return {
+      pools: await this.getPoolsFromMetadata(pools),
+      totalPages,
+    };
+  }
+
+  async getPoolsMetadata(
+    args?: QueryPoolsArgs,
+  ): Promise<QueryPoolsReturn<PoolMetadata>> {
     let { page = 1, pageSize = 50, coinTypes = [] } = args ? args : {};
 
     if (coinTypes && coinTypes.length) {
@@ -117,9 +131,105 @@ export class CLAMM {
 
     const safePage = !page ? 1 : page;
 
-    return this.#fetch<QueryPoolsReturn>(
+    return this.#fetch<QueryPoolsReturn<PoolMetadata>>(
       `get-all-clamm-pools?page=${safePage}&limit=${pageSize}`,
     );
+  }
+
+  async getPoolsFromMetadata(
+    poolsMetadata: readonly PoolMetadata[],
+  ): Promise<readonly InterestPool[]> {
+    const pools = await this.#client.multiGetObjects({
+      ids: poolsMetadata.map(x => x.poolObjectId),
+      options: { showContent: true, showType: true },
+    });
+
+    const metadatas: PoolData[] = [];
+    const stateIds: string[] = [];
+
+    pools.forEach(elem => {
+      invariant(
+        elem.data && elem.data.type && elem.data.content,
+        'Pool not found',
+      );
+
+      const poolObjectId = elem.data.objectId;
+      const isStable = elem.data.type.includes('curves::Stable');
+      const coinTypes = pathOr(
+        [] as MoveStruct[],
+        ['fields', 'coins', 'fields', 'contents'],
+        elem.data.content,
+      ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
+      const stateVersionedId = pathOr(
+        '',
+        ['fields', 'state', 'fields', 'id', 'id'],
+        elem.data.content,
+      );
+      const poolAdminAddress = pathOr(
+        '',
+        ['fields', 'pool_admin_address'],
+        elem.data.content,
+      );
+
+      metadatas.push({
+        poolObjectId,
+        isStable,
+        coinTypes,
+        poolAdminAddress,
+      });
+      stateIds.push(stateVersionedId);
+    });
+
+    const promises = stateIds.map(stateVersionedId =>
+      this.#client.getDynamicFields({
+        parentId: stateVersionedId,
+      }),
+    );
+
+    const dynamicFields = await Promise.all(promises);
+
+    const poolState = await this.#client.multiGetObjects({
+      ids: dynamicFields.map(field => field.data[0].objectId),
+      options: { showContent: true, showType: true },
+    });
+
+    return poolState.map((poolState, index) => {
+      const { isStable, poolAdminAddress, poolObjectId, coinTypes } =
+        metadatas[index];
+      invariant(
+        poolState.data &&
+          poolState.data.content &&
+          poolState.data.content.dataType === 'moveObject',
+        'PoolState data not found',
+      );
+
+      if (isStable) {
+        const { lpCoinType, state } = parseStableV1State(
+          poolState.data.content.fields,
+        );
+        return {
+          poolAdminAddress,
+          poolObjectId,
+          coinTypes,
+          state,
+          lpCoinType,
+          isStable,
+        } as StablePool;
+      }
+
+      const { lpCoinType, state } = parseVolatileV1State(
+        poolState.data.content.fields,
+      );
+
+      return {
+        poolAdminAddress,
+        poolObjectId,
+        coinTypes,
+        state,
+        lpCoinType,
+        isStable,
+      } as VolatilePool;
+    });
   }
 
   shareStablePool({ txb, pool }: SharePoolArgs) {
@@ -335,7 +445,6 @@ export class CLAMM {
         state,
         lpCoinType,
         isStable,
-        stateId,
       } as StablePool;
     }
 
@@ -350,7 +459,6 @@ export class CLAMM {
       state,
       lpCoinType,
       isStable,
-      stateId,
     } as VolatilePool;
   }
 

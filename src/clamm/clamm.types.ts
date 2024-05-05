@@ -148,8 +148,14 @@ export interface QuoteRemoveLiquidityArgs {
 
 export interface PoolMetadata {
   poolObjectId: string;
-  stateId: string;
   lpCoinType: string;
+  isStable: boolean;
+  coinTypes: readonly string[];
+}
+
+export interface PoolData {
+  poolObjectId: string;
+  poolAdminAddress: string;
   isStable: boolean;
   coinTypes: readonly string[];
 }
@@ -160,8 +166,8 @@ export interface QueryPoolsArgs {
   coinTypes?: readonly string[];
 }
 
-export interface QueryPoolsReturn {
-  pools: readonly PoolMetadata[];
+export interface QueryPoolsReturn<T> {
+  pools: readonly T[];
   totalPages: number | null | undefined;
 }
 
