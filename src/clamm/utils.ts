@@ -4,6 +4,7 @@ import {
   MoveStruct,
   SuiClient,
   SuiExecutionResult,
+  SuiObjectResponse,
 } from '@mysten/sui.js/client';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { normalizeStructTag, normalizeSuiAddress } from '@mysten/sui.js/utils';
@@ -70,6 +71,36 @@ export async function getCoinMetas(
 
   return metas;
 }
+
+export const parseInterestPool = (elem: SuiObjectResponse) => {
+  invariant(elem.data && elem.data.type && elem.data.content, 'Pool not found');
+
+  const poolObjectId = elem.data.objectId;
+  const isStable = elem.data.type.includes('curves::Stable');
+  const coinTypes = pathOr(
+    [] as MoveStruct[],
+    ['fields', 'coins', 'fields', 'contents'],
+    elem.data.content,
+  ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
+  const stateVersionedId = pathOr(
+    '',
+    ['fields', 'state', 'fields', 'id', 'id'],
+    elem.data.content,
+  );
+  const poolAdminAddress = pathOr(
+    '',
+    ['fields', 'pool_admin_address'],
+    elem.data.content,
+  );
+
+  return {
+    poolObjectId,
+    isStable,
+    coinTypes,
+    stateVersionedId,
+    poolAdminAddress,
+  };
+};
 
 export const parseStableV1State = (struct: MoveStruct) => {
   const fields = path(['value', 'fields'], struct) as Record<string, any>;

@@ -49,7 +49,7 @@ import {
 
     const response = await executeTx(txb);
     log(response);
-    console.log(minAmount);
+    log(minAmount);
   } catch (e) {
     console.log(e);
   }

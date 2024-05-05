@@ -5,6 +5,7 @@ import {
   TransactionObjectArgument,
   TransactionResult,
 } from '@mysten/sui.js/transactions';
+import { CoinPath, PoolObjectIdPath } from './router/router.types.ts';
 
 interface MaybeTxb {
   txb?: TransactionBlock;
@@ -150,7 +151,7 @@ export interface PoolMetadata {
   poolObjectId: string;
   lpCoinType: string;
   isStable: boolean;
-  coinTypes: readonly string[];
+  coinTypes: string[];
 }
 
 export interface PoolData {
@@ -169,6 +170,34 @@ export interface QueryPoolsArgs {
 export interface QueryPoolsReturn<T> {
   pools: readonly T[];
   totalPages: number | null | undefined;
+}
+
+export interface GetRoutesArgs {
+  coinIn: string;
+  coinOut: string;
+}
+
+export interface GetRouteQuotesArgs {
+  coinIn: string;
+  coinOut: string;
+  amount: bigint;
+}
+
+export interface SwapRouteArgs extends MaybeTxb {
+  coinIn: MoveObjectArgument;
+  route: [CoinPath, PoolObjectIdPath];
+  poolsMap: Record<string, PoolMetadata>;
+  minAmount?: bigint;
+}
+
+export interface GetRouteQuotesReturn {
+  routes: [CoinPath, PoolObjectIdPath, QuoteSwapReturn][];
+  poolsMap: Record<string, PoolMetadata>;
+}
+
+export interface GetRoutesReturn {
+  routes: [CoinPath, PoolObjectIdPath][];
+  poolsMap: Record<string, PoolMetadata>;
 }
 
 interface Pool<T> extends PoolMetadata {

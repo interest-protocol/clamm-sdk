@@ -1,11 +1,10 @@
 import { bcs } from '@mysten/sui.js/bcs';
-import { MoveStruct, SuiClient } from '@mysten/sui.js/client';
+import { SuiClient } from '@mysten/sui.js/client';
 import {
   TransactionBlock,
   TransactionObjectArgument,
 } from '@mysten/sui.js/transactions';
 import { isValidSuiObjectId, SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
-import { pathOr } from 'ramda';
 import invariant from 'tiny-invariant';
 
 import {
@@ -34,6 +33,11 @@ import {
   QueryPoolsReturn,
   PoolMetadata,
   PoolData,
+  GetRoutesArgs,
+  GetRouteQuotesArgs,
+  GetRouteQuotesReturn,
+  SwapRouteArgs,
+  GetRoutesReturn,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -44,10 +48,12 @@ import {
   devInspectAndGetReturnValues,
   getCoinMetas,
   listToString,
-  normalizeSuiCoinType,
+  parseInterestPool,
   parseStableV1State,
   parseVolatileV1State,
 } from './utils';
+
+import { constructDex, findRoutes } from './router';
 
 // Added this line to get all types into one file
 export * from './clamm.types.ts';
@@ -148,35 +154,8 @@ export class CLAMM {
     const stateIds: string[] = [];
 
     pools.forEach(elem => {
-      invariant(
-        elem.data && elem.data.type && elem.data.content,
-        'Pool not found',
-      );
-
-      const poolObjectId = elem.data.objectId;
-      const isStable = elem.data.type.includes('curves::Stable');
-      const coinTypes = pathOr(
-        [] as MoveStruct[],
-        ['fields', 'coins', 'fields', 'contents'],
-        elem.data.content,
-      ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
-      const stateVersionedId = pathOr(
-        '',
-        ['fields', 'state', 'fields', 'id', 'id'],
-        elem.data.content,
-      );
-      const poolAdminAddress = pathOr(
-        '',
-        ['fields', 'pool_admin_address'],
-        elem.data.content,
-      );
-
-      metadatas.push({
-        poolObjectId,
-        isStable,
-        coinTypes,
-        poolAdminAddress,
-      });
+      const { stateVersionedId, ...otherValues } = parseInterestPool(elem);
+      metadatas.push(otherValues);
       stateIds.push(stateVersionedId);
     });
 
@@ -196,6 +175,7 @@ export class CLAMM {
     return poolState.map((poolState, index) => {
       const { isStable, poolAdminAddress, poolObjectId, coinTypes } =
         metadatas[index];
+
       invariant(
         poolState.data &&
           poolState.data.content &&
@@ -230,6 +210,184 @@ export class CLAMM {
         isStable,
       } as VolatilePool;
     });
+  }
+
+  async getRoutes({
+    coinIn,
+    coinOut,
+  }: GetRoutesArgs): Promise<GetRoutesReturn> {
+    const { pools } = await this.getPoolsMetadata({
+      coinTypes: [coinIn, coinOut],
+    });
+
+    const poolsMap = pools.reduce(
+      (acc, pool) => ({
+        ...acc,
+        [pool.poolObjectId]: pool,
+      }),
+      {} as Record<string, PoolMetadata>,
+    );
+
+    return {
+      poolsMap,
+      routes: findRoutes(constructDex(pools), coinIn, coinOut),
+    };
+  }
+
+  async getRoutesQuotes({
+    coinIn,
+    coinOut,
+    amount,
+  }: GetRouteQuotesArgs): Promise<GetRouteQuotesReturn> {
+    if (!amount) return { routes: [], poolsMap: {} };
+
+    const { pools } = await this.getPoolsMetadata({
+      coinTypes: [coinIn, coinOut],
+    });
+
+    if (!pools.length) return { routes: [], poolsMap: {} };
+
+    const routes = findRoutes(constructDex(pools), coinIn, coinOut);
+
+    const poolsMap = pools.reduce(
+      (acc, pool) => ({
+        ...acc,
+        [pool.poolObjectId]: pool,
+      }),
+      {} as Record<string, PoolMetadata>,
+    );
+
+    const routeQuote = [];
+
+    if (!routes.length) return { routes: [], poolsMap: {} };
+
+    for (const [coinsPath, idsPath] of routes) {
+      const txb = new TransactionBlock();
+
+      let amountIn: BigInt | TransactionObjectArgument | any = amount;
+
+      for (const poolId of idsPath) {
+        const index = idsPath.indexOf(poolId);
+        const isFirstCall = index === 0;
+        const isLastCall = index + 1 === idsPath.length;
+
+        const poolMetadata = poolsMap[poolId];
+
+        const moduleName = poolMetadata.isStable
+          ? this.#stableModule
+          : this.#volatileModule;
+
+        if (isLastCall || (isFirstCall && isLastCall)) {
+          txb.moveCall({
+            target: `${this.#package}::${moduleName}::quote_swap`,
+            typeArguments: [
+              coinsPath[index],
+              coinsPath[index + 1],
+              poolMetadata.lpCoinType,
+            ],
+            arguments: [
+              txb.object(poolId),
+              txb.object(SUI_CLOCK_OBJECT_ID),
+              isFirstCall ? txb.pure.u64(amountIn.toString()) : amountIn,
+            ],
+          });
+
+          const [result] = await devInspectAndGetReturnValues(
+            this.#client,
+            txb,
+          );
+
+          invariant(result.length, 'Result is empty');
+          invariant(typeof result[0] === 'string', 'Value is not a string');
+          invariant(typeof result[1] === 'string', 'Value is not a string');
+
+          if (!poolMetadata.isStable)
+            invariant(
+              result.length === 2,
+              'Failed to get volatile quote values',
+            );
+
+          if (poolMetadata.isStable) {
+            invariant(result.length === 3, 'Failed to get stable quote values');
+            invariant(typeof result[2] === 'string', 'Value is not a string');
+          }
+
+          const output = poolMetadata.isStable
+            ? {
+                amount: BigInt(result[0]),
+                feeIn: BigInt(result[1]),
+                feeOut: BigInt(result[2] as string),
+              }
+            : {
+                amount: BigInt(result[0]),
+                fee: BigInt(result[1]),
+              };
+          routeQuote.push([coinsPath, idsPath, output]);
+          break;
+        }
+
+        [amountIn] = txb.moveCall({
+          target: `${this.#package}::${moduleName}::quote_swap`,
+          typeArguments: [
+            coinsPath[index],
+            coinsPath[index + 1],
+            poolMetadata.lpCoinType,
+          ],
+          arguments: [
+            txb.object(poolId),
+            txb.object(SUI_CLOCK_OBJECT_ID),
+            isFirstCall ? txb.pure.u64(amountIn.toString()) : amountIn,
+          ],
+        });
+      }
+    }
+
+    return { routes: routeQuote, poolsMap } as GetRouteQuotesReturn;
+  }
+
+  swapRoute({
+    txb = new TransactionBlock(),
+    coinIn,
+    poolsMap,
+    route,
+    minAmount = 0n,
+  }: SwapRouteArgs): SwapReturn {
+    invariant(route.length === 2, 'Route must have a length of two');
+
+    const [coinsPath, idsPath] = [route[0], route[1]];
+
+    let input = coinIn;
+
+    for (const poolId of idsPath) {
+      const index = idsPath.indexOf(poolId);
+      const isLastCall = index + 1 === idsPath.length;
+
+      const poolMetadata = poolsMap[poolId];
+
+      const moduleName = poolMetadata.isStable
+        ? this.#stableModule
+        : this.#volatileModule;
+
+      input = txb.moveCall({
+        target: `${this.#package}::${moduleName}::swap`,
+        typeArguments: [
+          coinsPath[index],
+          coinsPath[index + 1],
+          poolMetadata.lpCoinType,
+        ],
+        arguments: [
+          txb.object(poolId),
+          txb.object(SUI_CLOCK_OBJECT_ID),
+          this.#object(txb, input),
+          txb.pure.u64(isLastCall ? minAmount.toString() : '0'),
+        ],
+      });
+    }
+
+    return {
+      txb,
+      coinOut: input as SwapReturn['coinOut'],
+    };
   }
 
   shareStablePool({ txb, pool }: SharePoolArgs) {
@@ -320,11 +478,11 @@ export class CLAMM {
     );
     invariant(prices.length > 0, 'You must provide prices');
     invariant(
-      this.MAX_FEE > midFee,
+      this.MAX_FEE > midFee && midFee >= this.MIN_FEE,
       `Mid Fee must be lower than: ${this.MAX_FEE}`,
     );
     invariant(
-      this.MAX_FEE > outFee,
+      this.MAX_FEE > outFee && outFee >= this.MIN_FEE,
       `Out Fee must be lower than: ${this.MAX_FEE}`,
     );
     invariant(
@@ -342,6 +500,10 @@ export class CLAMM {
     invariant(
       maHalfTime > 1000 && this.MAX_MA_HALF_TIME >= maHalfTime,
       `Ma half time must be lower than: ${this.MAX_MA_HALF_TIME}`,
+    );
+    invariant(
+      this.MAX_GAMMA > gamma && gamma >= this.MIN_GAMMA,
+      `Gamma must be lower than ${this.MAX_GAMMA} and higher than ${this.MIN_GAMMA}`,
     );
 
     const supply = this.#treasuryIntoSupply(
@@ -391,36 +553,21 @@ export class CLAMM {
       options: { showContent: true, showType: true },
     });
 
-    invariant(
-      pool.data && pool.data.type && pool.data.content,
-      'Pool not found',
-    );
-
-    const poolObjectId = pool.data.objectId;
-    const isStable = pool.data.type.includes('curves::Stable');
-    const coinTypes = pathOr(
-      [] as MoveStruct[],
-      ['fields', 'coins', 'fields', 'contents'],
-      pool.data.content,
-    ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
-    const stateVersionedId = pathOr(
-      '',
-      ['fields', 'state', 'fields', 'id', 'id'],
-      pool.data.content,
-    );
-    const poolAdminAddress = pathOr(
-      '',
-      ['fields', 'pool_admin_address'],
-      pool.data.content,
-    );
+    const {
+      stateVersionedId,
+      poolAdminAddress,
+      poolObjectId,
+      isStable,
+      coinTypes,
+    } = parseInterestPool(pool);
 
     invariant(stateVersionedId, 'State Versioned id not found');
 
-    const poolDyanmicFields = await this.#client.getDynamicFields({
+    const poolDynamicFields = await this.#client.getDynamicFields({
       parentId: stateVersionedId,
     });
 
-    const stateId = poolDyanmicFields.data[0].objectId;
+    const stateId = poolDynamicFields.data[0].objectId;
 
     const poolState = await this.#client.getObject({
       id: stateId,
