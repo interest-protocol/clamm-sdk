@@ -278,12 +278,12 @@ export const PRECISION = 1000000000000000000n;
 export const COINS = {
   usdc: {
     treasuryCap:
-      '0x51c3deed5f0be30b0a4c9059248e5a7f90fb03eb24e005e075ddbc51d2eaac51',
+      '0x18eed948bf31c15a7037627d36baa92abc9efd1f9c73375e751fc8f9378b7228',
     coinMetadata:
-      '0xc3fc2bc563d8fd3bd5e82f774684a2918248c643166d0cc42a641597ecff1c39',
+      '0xe27e853b616dea3ade022dd82e8775e9f292bb8a60fc3f63b342ff29dba4c06e',
     coin: '0x4b57613e20b036c77bf025a5698e284badfc18da845f593e117fbec4adc51115',
     coinType:
-      '0x483a90eb70bf8f69bea1f7acdf387de0c251adfc019feceb5cf1bf5c60ebfc23::usdc::USDC',
+      '0xb97fc1bf5fb56a3b45dd312dbefbb5c9fb4453205ff67a05c73f3ba9964b5b66::usdc::USDC',
   },
   usdt: {
     treasuryCap:
@@ -318,7 +318,7 @@ export const STABLE_POOL_USDC_USDT_OBJECT_ID =
   '0xa4e8bae2be2cc2e8c6e9530730fb545e042d3844c0db338730eb4c211fdfcb5c';
 
 export const VOLATILE_POOL_USDC_ETH_OBJECT_ID =
-  '0xb68e3b000202ca33709827de26e08451a21e11c776ff44662c9c361589138eb7';
+  '0x8fdc21ed6816810cf2c5008c88edba78fd7e5f17a44a267c36df4f3b748f70d8';
 
 export function removeLeadingZeros(address: string): string {
   return (address as any).replaceAll(/0x0+/g, '0x');

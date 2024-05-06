@@ -4,7 +4,11 @@ import {
   TransactionBlock,
   TransactionObjectArgument,
 } from '@mysten/sui.js/transactions';
-import { isValidSuiObjectId, SUI_CLOCK_OBJECT_ID } from '@mysten/sui.js/utils';
+import {
+  isValidSuiObjectId,
+  SUI_CLOCK_OBJECT_ID,
+  normalizeSuiObjectId,
+} from '@mysten/sui.js/utils';
 import invariant from 'tiny-invariant';
 
 import {
@@ -75,6 +79,8 @@ export class CLAMM {
   #outFee = 45000000n;
   #gammaFee = 230000000000000n;
   #network: ClammConstructor['network'];
+  #mainnetClammAddress =
+    '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382';
   #END_POINT = 'https://www.suicoins.com/api/';
   stableType: string;
   volatileType: string;
@@ -100,9 +106,15 @@ export class CLAMM {
     suiTearsAddress,
     network,
   }: ClammConstructor) {
+    invariant(
+      isValidSuiObjectId(suiTearsAddress),
+      'Invalid Sui Tears💧 address',
+    );
+    invariant(isValidSuiObjectId(packageAddress), 'Invalid CLAMM address');
+
     this.#client = suiClient;
-    this.#package = packageAddress;
-    this.#suiTears = suiTearsAddress;
+    this.#package = normalizeSuiObjectId(packageAddress);
+    this.#suiTears = normalizeSuiObjectId(suiTearsAddress);
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
     this.#network = network;
@@ -1127,6 +1139,15 @@ export class CLAMM {
   }
 
   async #fetch<T>(api: string) {
+    invariant(
+      this.#network === 'mainnet',
+      'This endpoint only supports mainnet',
+    );
+    invariant(
+      this.#package === this.#mainnetClammAddress,
+      `The endpoint only supports the following package: ${this.#mainnetClammAddress}`,
+    );
+
     const response = await fetch(`${this.#END_POINT}${api}`, {
       mode: 'cors',
       headers: {
