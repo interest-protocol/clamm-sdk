@@ -18,3 +18,8 @@ export const REMOVE_LIQUIDITY_FUNCTION_NAME_MAP = {
   4: 'remove_liquidity_4_pool',
   5: 'remove_liquidity_5_pool',
 } as Record<number, string>;
+
+export enum SuiCoinsNetwork {
+  MAINNET = 'sui:mainnet',
+  TESTNET = 'sui:testnet',
+}

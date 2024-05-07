@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "6.0.0-alpha",
+  "version": "6.1.0-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
@@ -24,6 +24,7 @@
     "new-coins": "npx ts-node ./src/scripts/new-coins.script.ts",
     "get-routes-quote": "npx ts-node ./src/scripts/get-routes-quote.script.ts",
     "update-metadata": "npx ts-node ./src/scripts/new-coins.script.ts",
+    "save-pool": "npx ts-node ./src/scripts/save-pool.script.ts",
     "new-stable-2-pool": "npx ts-node ./src/scripts/stable-pool/new-2-pool.script.ts",
     "new-volatile-2-pool": "npx ts-node ./src/scripts/volatile-pool/new-2-pool.script.ts",
     "stable-add-liquidity-2-pool": "npx ts-node ./src/scripts/stable-pool/add-liquidity-2-pool.script.ts",

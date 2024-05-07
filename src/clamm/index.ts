@@ -47,6 +47,7 @@ import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
   NEW_POOL_FUNCTION_NAME_MAP,
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
+  SuiCoinsNetwork,
 } from './constants';
 import {
   devInspectAndGetReturnValues,
@@ -621,6 +622,17 @@ export class CLAMM {
     } as VolatilePool;
   }
 
+  async savePool(id: string) {
+    invariant(isValidSuiObjectId(id), 'Invalid pool object id');
+
+    await this.#post('save-clamm-pool', {
+      network: SuiCoinsNetwork.MAINNET,
+      poolId: id,
+    });
+
+    return true;
+  }
+
   async addLiquidity({
     txb = new TransactionBlock(),
     pool: _pool,
@@ -1153,6 +1165,28 @@ export class CLAMM {
       headers: {
         'Content-Type': 'application/json',
       },
+    });
+
+    return (await response.json()) as T;
+  }
+
+  async #post<T>(api: string, body: unknown) {
+    invariant(
+      this.#network === 'mainnet',
+      'This endpoint only supports mainnet',
+    );
+    invariant(
+      this.#package === this.#mainnetClammAddress,
+      `The endpoint only supports the following package: ${this.#mainnetClammAddress}`,
+    );
+
+    const response = await fetch(`${this.#END_POINT}${api}`, {
+      mode: 'cors',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
 
     return (await response.json()) as T;
