@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "6.1.1-alpha",
+  "version": "6.2.0-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
