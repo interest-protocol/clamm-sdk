@@ -12,6 +12,10 @@ interface MaybeTxb {
   txb?: TransactionBlock;
 }
 
+interface MaybeSlippage {
+  slippage?: number;
+}
+
 export interface ClammConstructor {
   suiClient: SuiClient;
   packageAddress: string;
@@ -64,7 +68,7 @@ export interface NewPoolReturn {
   lpCoin: TransactionNestedResult;
 }
 
-export interface AddLiquidityArgs extends MaybeTxb {
+export interface AddLiquidityArgs extends MaybeTxb, MaybeSlippage {
   pool: InterestPool | string;
   minAmount?: bigint;
   coinsIn: MoveObjectArgument[];
@@ -75,7 +79,7 @@ export interface AddLiquidityReturn {
   lpCoin: TransactionResult;
 }
 
-export interface RemoveLiquidityArgs extends MaybeTxb {
+export interface RemoveLiquidityArgs extends MaybeTxb, MaybeSlippage {
   pool: InterestPool | string;
   minAmounts?: readonly bigint[];
   lpCoin: MoveObjectArgument;
@@ -86,7 +90,7 @@ export interface RemoveLiquidityReturn extends MaybeTxb {
   coinsOut: TransactionNestedResult[];
 }
 
-export interface SwapArgs extends MaybeTxb {
+export interface SwapArgs extends MaybeTxb, MaybeSlippage {
   pool: InterestPool | string;
   coinInType: string;
   coinOutType: string;
@@ -99,7 +103,7 @@ export interface SwapReturn {
   coinOut: TransactionResult;
 }
 
-export interface RemoveLiquidityOneCoinArgs extends MaybeTxb {
+export interface RemoveLiquidityOneCoinArgs extends MaybeTxb, MaybeSlippage {
   pool: InterestPool | string;
   coinOutType: string;
   lpCoin: MoveObjectArgument;
@@ -199,6 +203,17 @@ export interface GetRouteQuotesReturn {
 export interface GetRoutesReturn {
   routes: [CoinPath, PoolObjectIdPath][];
   poolsMap: Record<string, PoolMetadata>;
+}
+
+export interface HandleCoinVectorArgs extends MaybeTxb {
+  coinType: string;
+  coins: MoveObjectArgument[];
+  value: bigint;
+}
+
+export interface HandleCoinVectorReturn {
+  txb: TransactionBlock;
+  coin: TransactionResult;
 }
 
 interface Pool<T> extends PoolMetadata {

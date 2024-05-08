@@ -23,3 +23,9 @@ export enum SuiCoinsNetwork {
   MAINNET = 'sui:mainnet',
   TESTNET = 'sui:testnet',
 }
+
+export const UTILS_PACKAGES = {
+  mainnet: '0xb2e3014cc53bd1f53a947591114ca56ad5a05990f9c0d0734833a75884d04c69',
+  testnet: '0x6201e31006640c39e77f2b7ef6e42ae8219045f3957da53b1280112dca2bd73e',
+  devnet: '',
+};

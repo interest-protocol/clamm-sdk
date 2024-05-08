@@ -3,6 +3,7 @@ import { SuiClient } from '@mysten/sui.js/client';
 import {
   TransactionBlock,
   TransactionObjectArgument,
+  TransactionResult,
 } from '@mysten/sui.js/transactions';
 import {
   isValidSuiObjectId,
@@ -19,6 +20,8 @@ import {
   GetRouteQuotesReturn,
   GetRoutesArgs,
   GetRoutesReturn,
+  HandleCoinVectorArgs,
+  HandleCoinVectorReturn,
   InterestPool,
   NewPoolReturn,
   NewStableArgs,
@@ -48,6 +51,7 @@ import {
   NEW_POOL_FUNCTION_NAME_MAP,
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
   SuiCoinsNetwork,
+  UTILS_PACKAGES,
 } from './constants';
 import { constructDex, findRoutes } from './router';
 import {
@@ -645,6 +649,7 @@ export class CLAMM {
     pool: _pool,
     coinsIn,
     minAmount = 0n,
+    slippage = 2,
   }: AddLiquidityArgs): Promise<AddLiquidityReturn> {
     let pool = _pool;
 
@@ -690,6 +695,8 @@ export class CLAMM {
           minAmounts,
         ],
       });
+
+      min = this.#deductSlippage(txb, min, slippage);
     }
 
     const lpCoin = txb.moveCall({
@@ -714,6 +721,7 @@ export class CLAMM {
     pool: _pool,
     lpCoin,
     minAmounts: _minAmounts,
+    slippage = 2,
   }: RemoveLiquidityArgs): Promise<RemoveLiquidityReturn> {
     let pool = _pool;
     const minAmounts = _minAmounts;
@@ -739,6 +747,7 @@ export class CLAMM {
         typeArguments: [pool.lpCoinType],
         arguments: [txb.object(pool.poolObjectId), value],
       });
+      min = this.#deductSlippage(txb, min, slippage);
     }
 
     const numOfCoins = pool.coinTypes.length;
@@ -773,6 +782,7 @@ export class CLAMM {
     coinInType,
     coinOutType,
     minAmount = 0n,
+    slippage = 2,
   }: SwapArgs): Promise<SwapReturn> {
     let pool = _pool;
 
@@ -808,6 +818,7 @@ export class CLAMM {
           this.#coinValue(txb, coinIn, coinInType),
         ],
       });
+      min = this.#deductSlippage(txb, min, slippage);
     }
 
     const coinOut = txb.moveCall({
@@ -1068,6 +1079,27 @@ export class CLAMM {
     return BigInt(result[0]);
   }
 
+  handleCoinVector({
+    txb = new TransactionBlock(),
+    coins,
+    coinType,
+  }: HandleCoinVectorArgs): HandleCoinVectorReturn {
+    const pkg = UTILS_PACKAGES[this.#network];
+
+    invariant(pkg, 'utils package not found');
+
+    const result = txb.moveCall({
+      target: `${pkg}::utils::handle_coin_vector`,
+      typeArguments: [coinType],
+      arguments: coins.map(x => this.#object(txb, x)),
+    });
+
+    return {
+      txb,
+      coin: result,
+    };
+  }
+
   async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {
     const cap = txb.moveCall({
       target: `${this.#suiTears}::coin_decimals::new_cap`,
@@ -1197,6 +1229,27 @@ export class CLAMM {
     });
 
     return (await response.json()) as T;
+  }
+
+  #deductSlippage(
+    txb: TransactionBlock,
+    amount: any,
+    slippage: number,
+  ): TransactionResult {
+    invariant(
+      slippage >= 0 && 100 >= slippage,
+      'Slippage must be in between 0 and 100 inclusive',
+    );
+    invariant(!isNaN(slippage), 'Slippage must be a number');
+
+    const pkg = UTILS_PACKAGES[this.#network];
+
+    invariant(pkg, 'utils package not found');
+
+    return txb.moveCall({
+      target: `${pkg}::utils::deduct_slippage`,
+      arguments: [amount, txb.pure.u64(slippage)],
+    });
   }
 
   #object(txb: TransactionBlock, id: string | TransactionObjectArgument) {
