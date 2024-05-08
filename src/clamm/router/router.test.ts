@@ -1,4 +1,4 @@
-import { findRoutes, constructDex } from './index.ts';
+import { constructDex,findRoutes } from './index.ts';
 
 const pools = [
   {

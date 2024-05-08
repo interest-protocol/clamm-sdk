@@ -8,7 +8,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['src/scripts/**', 'dist/**'],
+    ignores: ['src/scripts/**', 'dist/**', 'jest.config.js'],
   },
   {
     plugins: {

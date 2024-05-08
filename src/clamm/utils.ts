@@ -76,6 +76,7 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
   invariant(elem.data && elem.data.type && elem.data.content, 'Pool not found');
 
   const poolObjectId = elem.data.objectId;
+  const poolType = elem.data.type;
   const isStable = elem.data.type.includes('curves::Stable');
   const coinTypes = pathOr(
     [] as MoveStruct[],
@@ -99,6 +100,7 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
     coinTypes,
     stateVersionedId,
     poolAdminAddress,
+    poolType,
   };
 };
 

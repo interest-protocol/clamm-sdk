@@ -6,8 +6,8 @@ import {
 } from '@mysten/sui.js/transactions';
 import {
   isValidSuiObjectId,
-  SUI_CLOCK_OBJECT_ID,
   normalizeSuiObjectId,
+  SUI_CLOCK_OBJECT_ID,
 } from '@mysten/sui.js/utils';
 import invariant from 'tiny-invariant';
 
@@ -15,10 +15,18 @@ import {
   AddLiquidityArgs,
   AddLiquidityReturn,
   ClammConstructor,
+  GetRouteQuotesArgs,
+  GetRouteQuotesReturn,
+  GetRoutesArgs,
+  GetRoutesReturn,
   InterestPool,
   NewPoolReturn,
   NewStableArgs,
   NewVolatileArgs,
+  PoolData,
+  PoolMetadata,
+  QueryPoolsArgs,
+  QueryPoolsReturn,
   QuoteAddLiquidityArgs,
   QuoteRemoveLiquidityArgs,
   QuoteRemoveLiquidityOneCoiArgs,
@@ -32,16 +40,8 @@ import {
   StablePool,
   SwapArgs,
   SwapReturn,
-  VolatilePool,
-  QueryPoolsArgs,
-  QueryPoolsReturn,
-  PoolMetadata,
-  PoolData,
-  GetRoutesArgs,
-  GetRouteQuotesArgs,
-  GetRouteQuotesReturn,
   SwapRouteArgs,
-  GetRoutesReturn,
+  VolatilePool,
 } from './clamm.types';
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
@@ -49,6 +49,7 @@ import {
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
   SuiCoinsNetwork,
 } from './constants';
+import { constructDex, findRoutes } from './router';
 import {
   devInspectAndGetReturnValues,
   getCoinMetas,
@@ -57,8 +58,6 @@ import {
   parseStableV1State,
   parseVolatileV1State,
 } from './utils';
-
-import { constructDex, findRoutes } from './router';
 
 // Added this line to get all types into one file
 export * from './clamm.types.ts';
@@ -83,6 +82,7 @@ export class CLAMM {
   #mainnetClammAddress =
     '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382';
   #END_POINT = 'https://www.suicoins.com/api/';
+  #poolType: string;
   stableType: string;
   volatileType: string;
   // 1e18
@@ -118,6 +118,7 @@ export class CLAMM {
     this.#suiTears = normalizeSuiObjectId(suiTearsAddress);
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
+    this.#poolType = `${packageAddress}::interest_pool::InterestPool`;
     this.#network = network;
   }
 
@@ -135,7 +136,7 @@ export class CLAMM {
   async getPoolsMetadata(
     args?: QueryPoolsArgs,
   ): Promise<QueryPoolsReturn<PoolMetadata>> {
-    let { page = 1, pageSize = 50, coinTypes = [] } = args ? args : {};
+    const { page = 1, pageSize = 50, coinTypes = [] } = args ? args : {};
 
     if (coinTypes && coinTypes.length) {
       const pools = await this.#fetch<readonly PoolMetadata[]>(
@@ -277,7 +278,7 @@ export class CLAMM {
     for (const [coinsPath, idsPath] of routes) {
       const txb = new TransactionBlock();
 
-      let amountIn: BigInt | TransactionObjectArgument | any = amount;
+      let amountIn: bigint | TransactionObjectArgument | any = amount;
 
       for (const poolId of idsPath) {
         const index = idsPath.indexOf(poolId);
@@ -572,7 +573,13 @@ export class CLAMM {
       poolObjectId,
       isStable,
       coinTypes,
+      poolType,
     } = parseInterestPool(pool);
+
+    invariant(
+      poolType.startsWith(this.#poolType),
+      'It is not an Interest Protocol pool',
+    );
 
     invariant(stateVersionedId, 'State Versioned id not found');
 
