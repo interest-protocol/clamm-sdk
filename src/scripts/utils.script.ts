@@ -281,27 +281,24 @@ export const COINS = {
       '0x18eed948bf31c15a7037627d36baa92abc9efd1f9c73375e751fc8f9378b7228',
     coinMetadata:
       '0xe27e853b616dea3ade022dd82e8775e9f292bb8a60fc3f63b342ff29dba4c06e',
-    coin: '0x4b57613e20b036c77bf025a5698e284badfc18da845f593e117fbec4adc51115',
     coinType:
       '0xb97fc1bf5fb56a3b45dd312dbefbb5c9fb4453205ff67a05c73f3ba9964b5b66::usdc::USDC',
   },
   usdt: {
     treasuryCap:
-      '0xafd3b165e3cbdbf9eeae0c4897b7912e93017b582fbe89303f9f0d5c6cca066d',
+      '0x972f12ed506e246062c73e84dad2e7281f5061ae7328f523c38c8e3da49f63a5',
     coinMetadata:
-      '0x28e99a1f3e9de115e5e11889b8f6a582aeb79d7fa7a6238643608ead843487db',
-    coin: '0x180f9b8f0b279c03da576375d3154a15379914142031bcf6e83003372b15506c',
+      '0x40004811f4803ba906b88b03af50cbafb8d71a1c070b7af9991f4e1ac626899e',
     coinType:
-      '0x36668f22225d8d7fa053321f205e430fe7f80ce7919612b2c0094f961e4db75d::usdt::USDT',
+      '0xae870af23dda8285a5f11e8136190568796bb76a6e7f3b4061f7ded0c1ebe889::usdt::USDT',
   },
   eth: {
     treasuryCap:
-      '0xac21fa7f4b1a68938fe1cefd7afeb6d9df3fd5b0a72c0f33b87ad72901464b6f',
+      '0xa13ad40fa947760297fc581af6886a18c19e39e0c2777e7d657e4a6161decb75',
     coinMetadata:
-      '0x2138b576aac479f03b8274a92e99ad3d9314b3218bfa8285061be0cfbe12f355',
-    coin: '0x185366c4dfd8a600a5828ca2223b68288968c0e520e1fabf27906a2829092855',
+      '0x41b025bfca8120b0127381f8a828d553b5937acd0127be02b42aa634d6c39203',
     coinType:
-      '0x02dbca9476d5392e55d4cd689121172e37e23818a8650ba86bab7d095e1d5261::eth::ETH',
+      '0xc179ea5266d66726abd4ddbaa2d54cd69acef3de43734a1aeafdbf14470e0592::eth::ETH',
   },
   btc: {
     treasuryCap:
@@ -315,7 +312,7 @@ export const COINS = {
 };
 
 export const STABLE_POOL_USDC_USDT_OBJECT_ID =
-  '0xa4e8bae2be2cc2e8c6e9530730fb545e042d3844c0db338730eb4c211fdfcb5c';
+  '0xc327293beb3dad06ef8d49c825a2aafc0be96ff03dcd61dbdba7c8c3e0b27c5d';
 
 export const VOLATILE_POOL_USDC_ETH_OBJECT_ID =
   '0x8fdc21ed6816810cf2c5008c88edba78fd7e5f17a44a267c36df4f3b748f70d8';
