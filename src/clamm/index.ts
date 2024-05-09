@@ -105,6 +105,13 @@ export class CLAMM {
   MIN_GAMMA = 10_000_000_000n;
   MAX_GAMMA = 10_000_000_000_000_000n;
 
+  /**
+   * Constructs a new instance of the Clamm class.
+   * @param packageAddress - The address of the CLAMM package.
+   * @param suiClient - The Sui client instance.
+   * @param suiTearsAddress - The address of the Sui Tears💧.
+   * @param network - The network configuration.
+   */
   constructor({
     packageAddress,
     suiClient,
@@ -126,6 +133,12 @@ export class CLAMM {
     this.#network = network;
   }
 
+  /**
+   * Retrieves the interest pools based on the provided arguments.
+   *
+   * @param args - Optional arguments to filter the pools.
+   * @returns A promise that resolves to an object containing the retrieved pools and the total number of pages.
+   */
   async getPools(
     args?: QueryPoolsArgs,
   ): Promise<QueryPoolsReturn<InterestPool>> {
@@ -137,6 +150,14 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Retrieves the metadata of pools based on the provided arguments.
+   * If `coinTypes` is specified, it fetches pools with the specified coin types.
+   * Otherwise, it fetches all pools with pagination support.
+   *
+   * @param args - Optional arguments for querying pools.
+   * @returns A promise that resolves to the pool metadata and total pages (if applicable).
+   */
   async getPoolsMetadata(
     args?: QueryPoolsArgs,
   ): Promise<QueryPoolsReturn<PoolMetadata>> {
@@ -160,6 +181,12 @@ export class CLAMM {
     );
   }
 
+  /**
+   * Retrieves the interest pools from the provided pools metadata.
+   *
+   * @param poolsMetadata - An array of pool metadata objects.
+   * @returns A promise that resolves to an array of interest pools.
+   */
   async getPoolsFromMetadata(
     poolsMetadata: readonly PoolMetadata[],
   ): Promise<readonly InterestPool[]> {
@@ -230,6 +257,11 @@ export class CLAMM {
     });
   }
 
+  /**
+   * Retrieves the routes for swapping between two coins.
+   * @param {GetRoutesArgs} args - The arguments for getting routes.
+   * @returns {Promise<GetRoutesReturn>} - A promise that resolves to an object containing the pools map and the routes.
+   */
   async getRoutes({
     coinIn,
     coinOut,
@@ -252,6 +284,14 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Retrieves route quotes for a given set of parameters.
+   *
+   * @param coinIn - The input coin type.
+   * @param coinOut - The output coin type.
+   * @param amount - The amount to be exchanged.
+   * @returns A promise that resolves to an object containing the routes and pools map.
+   */
   async getRoutesQuotes({
     coinIn,
     coinOut,
@@ -363,6 +403,15 @@ export class CLAMM {
     return { routes: routeQuote, poolsMap } as GetRouteQuotesReturn;
   }
 
+  /**
+   * Executes a swap route by moving coins through multiple pools.
+   * @param txb - The TransactionBlock instance.
+   * @param coinIn - The input coin for the swap.
+   * @param poolsMap - A map of pool metadata.
+   * @param route - The swap route, represented as an array of two elements: coinsPath and idsPath.
+   * @param minAmount - The minimum amount for the swap (default: 0).
+   * @returns The TransactionBlock instance and the output coin of the swap.
+   */
   swapRoute({
     txb = new TransactionBlock(),
     coinIn,
@@ -408,6 +457,14 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Shares the stable pool.
+   *
+   * @param {SharePoolArgs} args - The arguments for sharing the pool.
+   * @param {TransactionBuilder} args.txb - The transaction builder.
+   * @param {string} args.pool - The pool to share.
+   * @returns {TransactionBuilder} The updated transaction builder.
+   */
   shareStablePool({ txb, pool }: SharePoolArgs) {
     txb.moveCall({
       target: `${this.#package}::${this.#poolModule}::share`,
@@ -417,6 +474,14 @@ export class CLAMM {
     return txb;
   }
 
+  /**
+   * Shares a volatile pool.
+   *
+   * @param {SharePoolArgs} args - The arguments for sharing the pool.
+   * @param {TransactionBuilder} args.txb - The transaction builder.
+   * @param {string} args.pool - The pool to share.
+   * @returns {TransactionBuilder} The updated transaction builder.
+   */
   shareVolatilePool({ txb, pool }: SharePoolArgs) {
     txb.moveCall({
       target: `${this.#package}::${this.#poolModule}::share`,
@@ -426,6 +491,16 @@ export class CLAMM {
     return txb;
   }
 
+  /**
+   * Creates a new stable pool.
+   *
+   * @param txb - The transaction block.
+   * @param a - The value of A.
+   * @param lpCoinTreasuryCap - The LP coin treasury cap.
+   * @param coins - The list of coins.
+   * @param typeArguments - The type arguments.
+   * @returns A promise that resolves to an object containing the new pool, pool admin, LP coin, and the updated transaction block.
+   */
   async newStable({
     txb = new TransactionBlock(),
     a = this.#stableA,
@@ -475,6 +550,24 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Creates a new volatile pool.
+   *
+   * @param txb - The transaction block.
+   * @param coins - The list of coins.
+   * @param typeArguments - The type arguments.
+   * @param lpCoinTreasuryCap - The LP coin treasury cap.
+   * @param a - The value of 'a'.
+   * @param gamma - The value of 'gamma'.
+   * @param extraProfit - The extra profit value.
+   * @param adjustmentStep - The adjustment step value.
+   * @param maHalfTime - The MA half time value.
+   * @param midFee - The mid fee value.
+   * @param outFee - The out fee value.
+   * @param gammaFee - The gamma fee value.
+   * @param prices - The list of prices.
+   * @returns A promise that resolves to an object containing the pool, pool admin, LP coin, and the updated transaction block.
+   */
   async newVolatile({
     txb = new TransactionBlock(),
     coins,
@@ -564,6 +657,15 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Retrieves an interest pool by its ID.
+   * @param id - The ID of the pool object.
+   * @returns A promise that resolves to an `InterestPool` object representing the retrieved pool.
+   * @throws {Error} If the pool object ID is invalid.
+   * @throws {Error} If the retrieved pool is not an Interest Protocol pool.
+   * @throws {Error} If the state versioned ID is not found.
+   * @throws {Error} If the pool state data is not found.
+   */
   async getPool(id: string): Promise<InterestPool> {
     invariant(isValidSuiObjectId(id), 'Invalid pool object id');
     const pool = await this.#client.getObject({
@@ -633,6 +735,11 @@ export class CLAMM {
     } as VolatilePool;
   }
 
+  /**
+   * Saves a pool with the specified ID.
+   * @param id - The ID of the pool to save.
+   * @returns A boolean indicating whether the pool was saved successfully.
+   */
   async savePool(id: string) {
     invariant(isValidSuiObjectId(id), 'Invalid pool object id');
 
@@ -644,6 +751,17 @@ export class CLAMM {
     return true;
   }
 
+  /**
+   * Adds liquidity to the pool.
+   *
+   * @param options - The options for adding liquidity.
+   * @param options.txb - The transaction builder (optional).
+   * @param options.pool - The pool object or pool ID.
+   * @param options.coinsIn - The input coins to add liquidity (should be splitted before).
+   * @param options.minAmount - The minimum amount for the liquidity (default: 0).
+   * @param options.slippage - The slippage tolerance in percentage (default: 2).
+   * @returns A promise that resolves to the transaction block and the LP coin.
+   */
   async addLiquidity({
     txb = new TransactionBlock(),
     pool: _pool,
@@ -716,6 +834,16 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Removes liquidity from a pool.
+   * @param {RemoveLiquidityArgs} options - The options for removing liquidity.
+   * @param {TransactionBlock} options.txb - The transaction block to use for the operation.
+   * @param {string | Pool} options.pool - The pool to remove liquidity from. Can be either the pool ID or the pool object.
+   * @param {string} options.lpCoin - The LP coin to remove (should be splitted before).
+   * @param {string[]} options.minAmounts - The minimum amounts of each coin to receive after removing liquidity.
+   * @param {number} options.slippage - The slippage tolerance percentage.
+   * @returns {Promise<RemoveLiquidityReturn>} A promise that resolves to the result of the remove liquidity operation.
+   */
   async removeLiquidity({
     txb = new TransactionBlock(),
     pool: _pool,
@@ -775,6 +903,18 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Swaps one type of coin for another in a pool.
+   * @param {SwapArgs} options - The swap options.
+   * @param {TransactionBlock} options.txb - The transaction block to use for the swap.
+   * @param {string | Pool} options.pool - The pool to perform the swap in. Can be either the pool object or the pool ID.
+   * @param {string} options.coinIn - The input coin to swap (should be splitted before).
+   * @param {string} options.coinInType - The type of the input coin.
+   * @param {string} options.coinOutType - The type of the output coin.
+   * @param {bigint} [options.minAmount=0n] - The minimum amount of output coin to receive from the swap.
+   * @param {number} [options.slippage=2] - The slippage percentage to apply to the minimum amount.
+   * @returns {Promise<SwapReturn>} A promise that resolves to the swap result, including the transaction block and the output coin.
+   */
   async swap({
     txb = new TransactionBlock(),
     pool: _pool,
@@ -838,6 +978,16 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Removes liquidity from a pool and receives only one type of coin.
+   * @param {RemoveLiquidityOneCoinArgs} options - The options for removing liquidity.
+   * @param {TransactionBlock} options.txb - The transaction block to use for the operation.
+   * @param {string | Pool} options.pool - The pool to remove liquidity from. Can be either the pool object or the pool ID.
+   * @param {string} options.lpCoin - The LP coin to remove (should be splitted before).
+   * @param {string} options.coinOutType - The type of the output coin.
+   * @param {bigint} [options.minAmount=0n] - The minimum amount for the liquidity (default: 0).
+   * @returns {Promise<RemoveLiquidityOneCoinReturn>} A promise that resolves to the result of the remove liquidity operation.
+   */
   async removeLiquidityOneCoin({
     txb = new TransactionBlock(),
     pool: _pool,
@@ -893,6 +1043,16 @@ export class CLAMM {
     };
   }
 
+  /**
+   * Quotes a swap operation between two coins.
+   *
+   * @param {QuoteSwapArgs} options - The options for the quote swap.
+   * @param {string | Pool} options.pool - The pool to perform the swap on. Can be either the pool object or the pool ID.
+   * @param {string} options.coinInType - The type of the input coin.
+   * @param {string} options.coinOutType - The type of the output coin.
+   * @param {bigint} options.amount - The amount of the input coin to swap (splitted amount).
+   * @returns {Promise<QuoteSwapReturn>} A promise that resolves to the result of the quote swap operation.
+   */
   async quoteSwap({
     pool: _pool,
     coinInType,
@@ -963,6 +1123,13 @@ export class CLAMM {
         };
   }
 
+  /**
+   * Quotes adding liquidity to a pool.
+   * @param {Object} options - The options for adding liquidity.
+   * @param {string | Pool} options.pool - The pool object or pool ID to add liquidity to.
+   * @param {bigint[]} options.amounts - The amounts of tokens to add liquidity with.
+   * @returns {Promise<bigint>} - The result of adding liquidity as a bigint.
+   */
   async quoteAddLiquidity({
     pool: _pool,
     amounts,
@@ -1000,6 +1167,13 @@ export class CLAMM {
     return BigInt(result[0]);
   }
 
+  /**
+   * Quotes removing liquidity from a pool.
+   * @param {QuoteRemoveLiquidityArgs} options - The options for removing liquidity.
+   * @param {string | Pool} options.pool - The pool object or pool ID to remove liquidity from.
+   * @param {bigint} options.amount - The amount of liquidity to remove.
+   * @returns {Promise<bigint[]>} - The result of removing liquidity as an array of bigints.
+   */
   async quoteRemoveLiquidity({
     pool: _pool,
     amount,
@@ -1036,6 +1210,14 @@ export class CLAMM {
     return result[0].map(x => BigInt(x));
   }
 
+  /**
+   * Quotes removing liquidity from a pool and receiving only one type of coin.
+   * @param {QuoteRemoveLiquidityOneCoiArgs} options - The options for removing liquidity.
+   * @param {string | Pool} options.pool - The pool object or pool ID to remove liquidity from.
+   * @param {string} options.coinOutType - The type of the output coin.
+   * @param {bigint} options.amount - The amount of liquidity to remove.
+   * @returns {Promise<bigint>} - The result of removing liquidity as a bigint.
+   */
   async quoteRemoveLiquidityOneCoin({
     pool: _pool,
     coinOutType,
