@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "6.2.0-alpha",
+  "version": "7.0.0-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
@@ -36,7 +36,7 @@
     "stable-swap": "npx ts-node ./src/scripts/stable-pool/swap.script.ts",
     "volatile-swap": "npx ts-node ./src/scripts/volatile-pool/swap.script.ts",
     "volatile-swap-route": "npx ts-node ./src/scripts/volatile-pool/swap-route.script.ts",
-    "get-pools": "npx ts-node ./src/scripts/get-pools.script.ts",
+    "get-pools": "pnpx ts-node ./src/scripts/get-pools.script.ts",
     "lint": "npx eslint . --fix",
     "clean": "rimraf dist && rimraf tsconfig.prod.tsbuildinfo && rimraf tsconfig.tsbuildinfo",
     "build:tsup": "tsup --format esm,cjs --sourcemap",
@@ -54,6 +54,7 @@
   "license": "MIT",
   "dependencies": {
     "@mysten/sui.js": "^0.51.2",
+    "just-camel-case": "^6.2.0",
     "ramda": "^0.29.1",
     "tiny-invariant": "^1.3.3"
   },

@@ -8,11 +8,17 @@ import {
 } from '@mysten/sui.js/client';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { normalizeStructTag, normalizeSuiAddress } from '@mysten/sui.js/utils';
+import camelCase from 'just-camel-case';
 import { path, pathOr, prop, propOr } from 'ramda';
 import { map, toString } from 'ramda';
 import invariant from 'tiny-invariant';
 
-import { CoinMeta, StablePoolState, VolatilePoolState } from './clamm.types';
+import {
+  CoinMeta,
+  InterestPool,
+  StablePoolState,
+  VolatilePoolState,
+} from './clamm.types';
 import data from './data/metadata.json';
 
 export const listToString = map(toString);
@@ -93,6 +99,28 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
     ['fields', 'pool_admin_address'],
     elem.data.content,
   );
+  const hooks = pathOr(
+    [] as any[],
+    ['fields', 'hooks', 'fields', 'rules', 'fields', 'contents'],
+    elem.data.content,
+  ).reduce(
+    (acc, elem) => {
+      const key = pathOr('', ['fields', 'key'], elem);
+      const value = pathOr(
+        [] as any[],
+        ['fields', 'value', 'fields', 'contents'],
+        elem,
+      )
+        .map(x => pathOr('', ['fields', 'name'], x))
+        .map((x: string) => normalizeStructTag(x));
+
+      return {
+        ...acc,
+        [camelCase(key)]: value,
+      };
+    },
+    {} as InterestPool['hooks'],
+  );
 
   return {
     poolObjectId,
@@ -101,6 +129,7 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
     stateVersionedId,
     poolAdminAddress,
     poolType,
+    hooks,
   };
 };
 

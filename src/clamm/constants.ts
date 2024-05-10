@@ -1,3 +1,19 @@
+export const PACKAGES = {
+  mainnet: {
+    CLAMM: '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382',
+    SUITEARS:
+      '0x7ba65fa88ed4026304b7f95ee86f96f8169170efe84b56d465b4fe305e2486cb',
+  },
+  testnet: {
+    CLAMM: '',
+    SUITEARS: '',
+  },
+  devnet: {
+    CLAMM: '',
+    SUITEARS: '',
+  },
+};
+
 export const NEW_POOL_FUNCTION_NAME_MAP = {
   3: 'new_2_pool',
   4: 'new_3_pool',

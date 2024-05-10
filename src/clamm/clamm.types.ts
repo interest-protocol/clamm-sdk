@@ -18,8 +18,6 @@ interface MaybeSlippage {
 
 export interface ClammConstructor {
   suiClient: SuiClient;
-  packageAddress: string;
-  suiTearsAddress: string;
   network: 'testnet' | 'mainnet' | 'devnet';
 }
 
@@ -157,6 +155,7 @@ export interface PoolMetadata {
   lpCoinType: string;
   isStable: boolean;
   coinTypes: string[];
+  hooks?: Record<string, readonly string[]>;
 }
 
 export interface PoolData {
@@ -164,6 +163,7 @@ export interface PoolData {
   poolAdminAddress: string;
   isStable: boolean;
   coinTypes: readonly string[];
+  hooks?: Record<string, readonly string[]>;
 }
 
 export interface QueryPoolsArgs {

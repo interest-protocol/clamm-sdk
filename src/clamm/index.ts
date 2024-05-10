@@ -10,6 +10,7 @@ import {
   normalizeSuiObjectId,
   SUI_CLOCK_OBJECT_ID,
 } from '@mysten/sui.js/utils';
+import { isEmpty } from 'ramda';
 import invariant from 'tiny-invariant';
 
 import {
@@ -49,6 +50,7 @@ import {
 import {
   ADD_LIQUIDITY_FUNCTION_NAME_MAP,
   NEW_POOL_FUNCTION_NAME_MAP,
+  PACKAGES,
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
   SuiCoinsNetwork,
   UTILS_PACKAGES,
@@ -109,16 +111,14 @@ export class CLAMM {
    * @note Constructs a new instance of the CLAMM class.
    *
    * @param {string} packageAddress - The address of the CLAMM package.
-   * @param {SuiClient} suiClient - The Sui client instance.
-   * @param {String} suiTearsAddress - The address of Sui Tears💧.
    * @param {'mainnet' | 'testnet'} network - The network. The options are 'mainnet' | 'testnet'
    */
-  constructor({
-    packageAddress,
-    suiClient,
-    suiTearsAddress,
-    network,
-  }: ClammConstructor) {
+  constructor({ suiClient, network }: ClammConstructor) {
+    const pkgs = PACKAGES[network];
+
+    const suiTearsAddress = pkgs.SUITEARS;
+    const packageAddress = pkgs.CLAMM;
+
     invariant(
       isValidSuiObjectId(suiTearsAddress),
       'Invalid Sui Tears💧 address',
@@ -699,6 +699,7 @@ export class CLAMM {
       isStable,
       coinTypes,
       poolType,
+      hooks,
     } = parseInterestPool(pool);
 
     invariant(
@@ -737,6 +738,7 @@ export class CLAMM {
         state,
         lpCoinType,
         isStable,
+        hooks: hooks && !isEmpty(hooks) ? hooks : undefined,
       } as StablePool;
     }
 
@@ -751,6 +753,7 @@ export class CLAMM {
       state,
       lpCoinType,
       isStable,
+      hooks: hooks && !isEmpty(hooks) ? hooks : undefined,
     } as VolatilePool;
   }
 
