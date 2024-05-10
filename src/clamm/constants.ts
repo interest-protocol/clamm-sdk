@@ -3,14 +3,17 @@ export const PACKAGES = {
     CLAMM: '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382',
     SUITEARS:
       '0x7ba65fa88ed4026304b7f95ee86f96f8169170efe84b56d465b4fe305e2486cb',
+    UTILS: '0xff2f1a595831846fc63daabfb59d5e7111376579ec8db852d47c26aec42c2ab9',
   },
   testnet: {
     CLAMM: '',
     SUITEARS: '',
+    UTILS: '0x8744a0ae6d4c57b721bea42261682ce81f66bf9ee7a8ef94a85c66445df23771',
   },
   devnet: {
     CLAMM: '',
     SUITEARS: '',
+    UTILS: '',
   },
 };
 
@@ -39,9 +42,3 @@ export enum SuiCoinsNetwork {
   MAINNET = 'sui:mainnet',
   TESTNET = 'sui:testnet',
 }
-
-export const UTILS_PACKAGES = {
-  mainnet: '0xb2e3014cc53bd1f53a947591114ca56ad5a05990f9c0d0734833a75884d04c69',
-  testnet: '0x6201e31006640c39e77f2b7ef6e42ae8219045f3957da53b1280112dca2bd73e',
-  devnet: '',
-};

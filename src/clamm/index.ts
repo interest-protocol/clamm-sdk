@@ -53,7 +53,6 @@ import {
   PACKAGES,
   REMOVE_LIQUIDITY_FUNCTION_NAME_MAP,
   SuiCoinsNetwork,
-  UTILS_PACKAGES,
 } from './constants';
 import { constructDex, findRoutes } from './router';
 import {
@@ -116,8 +115,8 @@ export class CLAMM {
   constructor({ suiClient, network }: ClammConstructor) {
     const pkgs = PACKAGES[network];
 
-    const suiTearsAddress = pkgs.SUITEARS;
-    const packageAddress = pkgs.CLAMM;
+    const suiTearsAddress = normalizeSuiObjectId(pkgs.SUITEARS);
+    const packageAddress = normalizeSuiObjectId(pkgs.CLAMM);
 
     invariant(
       isValidSuiObjectId(suiTearsAddress),
@@ -126,8 +125,8 @@ export class CLAMM {
     invariant(isValidSuiObjectId(packageAddress), 'Invalid CLAMM address');
 
     this.#client = suiClient;
-    this.#package = normalizeSuiObjectId(packageAddress);
-    this.#suiTears = normalizeSuiObjectId(suiTearsAddress);
+    this.#package = packageAddress;
+    this.#suiTears = suiTearsAddress;
     this.stableType = `${packageAddress}::curves::Stable`;
     this.volatileType = `${packageAddress}::curves::Volatile`;
     this.#poolType = `${packageAddress}::interest_pool::InterestPool`;
@@ -738,7 +737,7 @@ export class CLAMM {
         state,
         lpCoinType,
         isStable,
-        hooks: hooks && !isEmpty(hooks) ? hooks : undefined,
+        hooks: hooks && !isEmpty(hooks) ? hooks : null,
       } as StablePool;
     }
 
@@ -753,7 +752,7 @@ export class CLAMM {
       state,
       lpCoinType,
       isStable,
-      hooks: hooks && !isEmpty(hooks) ? hooks : undefined,
+      hooks: hooks && !isEmpty(hooks) ? hooks : null,
     } as VolatilePool;
   }
 
@@ -899,7 +898,7 @@ export class CLAMM {
         typeArguments: [pool.lpCoinType],
         arguments: [txb.object(pool.poolObjectId), value],
       });
-      min = this.#deductSlippage(txb, min, slippage);
+      min = this.#deductSlippageFromVector(txb, min, slippage);
     }
 
     const numOfCoins = pool.coinTypes.length;
@@ -1019,6 +1018,7 @@ export class CLAMM {
     pool: _pool,
     lpCoin,
     coinOutType,
+    slippage = 2,
     minAmount = 0n,
   }: RemoveLiquidityOneCoinArgs): Promise<RemoveLiquidityOneCoinReturn> {
     let pool = _pool;
@@ -1050,6 +1050,8 @@ export class CLAMM {
           this.#coinValue(txb, lpCoin, pool.lpCoinType),
         ],
       });
+
+      min = this.#deductSlippage(txb, min, slippage);
     }
 
     const coinOut = txb.moveCall({
@@ -1305,12 +1307,12 @@ export class CLAMM {
     coinType,
     value,
   }: HandleCoinVectorArgs): HandleCoinVectorReturn {
-    const pkg = UTILS_PACKAGES[this.#network];
+    const pkg = PACKAGES[this.#network];
 
     invariant(pkg, 'utils package not found');
 
     const result = txb.moveCall({
-      target: `${pkg}::utils::handle_coin_vector`,
+      target: `${pkg.UTILS}::utils::handle_coin_vector`,
       typeArguments: [coinType],
       arguments: [
         txb.makeMoveVec({
@@ -1468,13 +1470,34 @@ export class CLAMM {
     );
     invariant(!isNaN(slippage), 'Slippage must be a number');
 
-    const pkg = UTILS_PACKAGES[this.#network];
+    const pkg = PACKAGES[this.#network];
 
     invariant(pkg, 'utils package not found');
 
     return txb.moveCall({
-      target: `${pkg}::utils::deduct_slippage`,
+      target: `${pkg.UTILS}::utils::deduct_slippage`,
       arguments: [amount, txb.pure.u64(slippage)],
+    });
+  }
+
+  #deductSlippageFromVector(
+    txb: TransactionBlock,
+    amounts: any,
+    slippage: number,
+  ): TransactionResult {
+    invariant(
+      slippage >= 0 && 100 >= slippage,
+      'Slippage must be in between 0 and 100 inclusive',
+    );
+    invariant(!isNaN(slippage), 'Slippage must be a number');
+
+    const pkg = PACKAGES[this.#network];
+
+    invariant(pkg, 'utils package not found');
+
+    return txb.moveCall({
+      target: `${pkg.UTILS}::utils::deduct_slippage_from_vector`,
+      arguments: [amounts, txb.pure.u64(slippage)],
     });
   }
 

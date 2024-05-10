@@ -163,7 +163,7 @@ export interface PoolData {
   poolAdminAddress: string;
   isStable: boolean;
   coinTypes: readonly string[];
-  hooks?: Record<string, readonly string[]>;
+  hooks?: Record<string, readonly string[]> | null;
 }
 
 export interface QueryPoolsArgs {

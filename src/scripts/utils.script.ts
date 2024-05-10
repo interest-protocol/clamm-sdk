@@ -298,15 +298,6 @@ export const COINS = {
     coinType:
       '0xc179ea5266d66726abd4ddbaa2d54cd69acef3de43734a1aeafdbf14470e0592::eth::ETH',
   },
-  btc: {
-    treasuryCap:
-      '0xf3fbfdc74eb767df9aaa667b50c63c4b1e8893db89973ad6c2eceb49129e103a',
-    coinMetadata:
-      '0xacb3743c2c6cf13b4e2fa619391a21a85c360074732c41a02624beaf8adaacf9',
-    coin: '0x8e62fce7279b04fe44be4c2b896c473d79a8d519bb982c1f507dadcba436db16',
-    coinType:
-      '0xa78e1a10d4fa677d5a5d86554b0e49348cf8302f1c53941f4bf58b67881e5128::btc::BTC',
-  },
 };
 
 export const STABLE_POOL_USDC_USDT_OBJECT_ID =
@@ -314,6 +305,9 @@ export const STABLE_POOL_USDC_USDT_OBJECT_ID =
 
 export const VOLATILE_POOL_USDC_ETH_OBJECT_ID =
   '0x8fdc21ed6816810cf2c5008c88edba78fd7e5f17a44a267c36df4f3b748f70d8';
+
+export const VOLATILE_POOL_USDT_ETH_OBJECT_ID =
+  '0x2710403d3852257df01f1708d92b6317b1535c3b9dbba5258db872f516954ca3';
 
 export function removeLeadingZeros(address: string): string {
   return (address as any).replaceAll(/0x0+/g, '0x');
