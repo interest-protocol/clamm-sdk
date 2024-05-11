@@ -426,16 +426,47 @@ export class CLAMM {
    * @param {bigint} args.minAmount - The minimum amount for the swap (default: 0).
    * @returns The TransactionBlock instance and the output coin of the swap.
    */
-  swapRoute({
+  async swapRoute({
     txb = new TransactionBlock(),
     coinIn,
     poolsMap,
     route,
     minAmount = 0n,
-  }: SwapRouteArgs): SwapReturn {
+    slippage = 2,
+  }: SwapRouteArgs): Promise<SwapReturn> {
     invariant(route.length === 2, 'Route must have a length of two');
 
     const [coinsPath, idsPath] = [route[0], route[1]];
+
+    let min = undefined;
+    if (minAmount) {
+      min = txb.pure.u64(minAmount.toString());
+    } else {
+      for (const poolId of idsPath) {
+        const index = idsPath.indexOf(poolId);
+
+        const poolMetadata = poolsMap[poolId];
+
+        const moduleName = poolMetadata.isStable
+          ? this.#stableModule
+          : this.#volatileModule;
+
+        [min] = txb.moveCall({
+          target: `${this.#package}::${moduleName}::quote_swap`,
+          typeArguments: [
+            coinsPath[index],
+            coinsPath[index + 1],
+            poolMetadata.lpCoinType,
+          ],
+          arguments: [
+            txb.object(poolId),
+            txb.object(SUI_CLOCK_OBJECT_ID),
+            min ? min : this.#coinValue(txb, coinIn, coinsPath[index]),
+          ],
+        });
+        min = this.#deductSlippage(txb, min, slippage);
+      }
+    }
 
     let input = coinIn;
 
@@ -460,7 +491,7 @@ export class CLAMM {
           txb.object(poolId),
           txb.object(SUI_CLOCK_OBJECT_ID),
           this.#object(txb, input),
-          txb.pure.u64(isLastCall ? minAmount.toString() : '0'),
+          isLastCall ? min! : txb.pure.u64('0'),
         ],
       });
     }

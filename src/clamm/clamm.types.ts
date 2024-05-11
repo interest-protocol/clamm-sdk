@@ -188,7 +188,7 @@ export interface GetRouteQuotesArgs {
   amount: bigint;
 }
 
-export interface SwapRouteArgs extends MaybeTxb {
+export interface SwapRouteArgs extends MaybeTxb, MaybeSlippage {
   coinIn: MoveObjectArgument;
   route: [CoinPath, PoolObjectIdPath];
   poolsMap: Record<string, PoolMetadata>;
