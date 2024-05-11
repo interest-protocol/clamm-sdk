@@ -1292,6 +1292,33 @@ export class CLAMM {
     return BigInt(result[0]);
   }
 
+  async getStablePoolVirtualPrice(id: string | InterestPool) {
+    const txb = new TransactionBlock();
+
+    let pool = id;
+
+    // lazy fetch
+    if (typeof pool === 'string') {
+      pool = await this.getPool(pool);
+    }
+
+    txb.moveCall({
+      target: `${this.#package}::${this.#stableModule}::virtual_price`,
+      typeArguments: [pool.lpCoinType],
+      arguments: [
+        txb.object(pool.poolObjectId),
+        txb.object(SUI_CLOCK_OBJECT_ID),
+      ],
+    });
+
+    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+
+    invariant(result.length, 'Result is empty');
+    invariant(typeof result[0] === 'string', 'Invalid value');
+
+    return BigInt(result[0]);
+  }
+
   /**
    * @note Merges all coins into one and then splits into a new coin with `value`. It will destroy the first coin if it has a value of zero.
    *

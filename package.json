@@ -1,6 +1,6 @@
 {
   "name": "@interest-protocol/clamm-sdk",
-  "version": "8.0.0-alpha",
+  "version": "8.0.1-alpha",
   "author": "jose cerqueira",
   "files": [
     "dist"
@@ -33,6 +33,7 @@
     "volatile-remove-liquidity-2-pool": "npx ts-node ./src/scripts/volatile-pool/remove-liquidity-2-pool.script.ts",
     "stable-remove-liquidity-one-coin-2-pool": "npx ts-node ./src/scripts/stable-pool/remove-liquidity-one-coin.script.ts",
     "volatile-remove-liquidity-one-coin-2-pool": "npx ts-node ./src/scripts/stable-pool/remove-liquidity-one-coin.script.ts",
+    "get-stable-virtual-price": "npx ts-node ./src/scripts/stable-pool/get-virtual-price.script.ts",
     "stable-swap": "npx ts-node ./src/scripts/stable-pool/swap.script.ts",
     "volatile-swap": "npx ts-node ./src/scripts/volatile-pool/swap.script.ts",
     "volatile-swap-route": "npx ts-node ./src/scripts/volatile-pool/swap-route.script.ts",

@@ -250,6 +250,7 @@ export interface StablePoolState {
   futureATime: bigint;
   nCoins: number;
   fees: StableFees;
+  virtualPrice: bigint;
 }
 
 export interface CoinState {
