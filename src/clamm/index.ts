@@ -426,14 +426,14 @@ export class CLAMM {
    * @param {bigint} args.minAmount - The minimum amount for the swap (default: 0).
    * @returns The TransactionBlock instance and the output coin of the swap.
    */
-  async swapRoute({
+  swapRoute({
     txb = new TransactionBlock(),
     coinIn,
     poolsMap,
     route,
     minAmount = 0n,
     slippage = 2,
-  }: SwapRouteArgs): Promise<SwapReturn> {
+  }: SwapRouteArgs): SwapReturn {
     invariant(route.length === 2, 'Route must have a length of two');
 
     const [coinsPath, idsPath] = [route[0], route[1]];
