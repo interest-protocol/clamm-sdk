@@ -281,6 +281,12 @@ export class CLAMM {
       coinTypes: [coinIn, coinOut],
     });
 
+    if (!pools.length)
+      return {
+        poolsMap: {},
+        routes: [],
+      };
+
     const poolsMap = pools.reduce(
       (acc, pool) => ({
         ...acc,
@@ -437,6 +443,9 @@ export class CLAMM {
     invariant(route.length === 2, 'Route must have a length of two');
 
     const [coinsPath, idsPath] = [route[0], route[1]];
+
+    invariant(coinsPath?.length, 'Missing coins path');
+    invariant(idsPath?.length, 'Missing pool ids paths');
 
     let min = undefined;
     if (minAmount) {
