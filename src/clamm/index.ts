@@ -7,6 +7,7 @@ import {
 } from '@mysten/sui.js/transactions';
 import {
   isValidSuiObjectId,
+  normalizeStructTag,
   normalizeSuiObjectId,
   SUI_CLOCK_OBJECT_ID,
 } from '@mysten/sui.js/utils';
@@ -173,7 +174,7 @@ export class CLAMM {
 
     if (coinTypes && coinTypes.length) {
       const pools = await this.#fetch<readonly PoolMetadata[]>(
-        `get-clamm-pools-by-types?coinTypes=${coinTypes.toString()}`,
+        `get-clamm-pools-by-types?coinTypes=${coinTypes.map(type => normalizeStructTag(type)).toString()}`,
       );
 
       return {
@@ -277,6 +278,9 @@ export class CLAMM {
     coinIn,
     coinOut,
   }: GetRoutesArgs): Promise<GetRoutesReturn> {
+    coinIn = normalizeStructTag(coinIn);
+    coinOut = normalizeStructTag(coinOut);
+
     const { pools } = await this.getPoolsMetadata({
       coinTypes: [coinIn, coinOut],
     });
@@ -315,6 +319,9 @@ export class CLAMM {
     coinOut,
     amount,
   }: GetRouteQuotesArgs): Promise<GetRouteQuotesReturn> {
+    coinIn = normalizeStructTag(coinIn);
+    coinOut = normalizeStructTag(coinOut);
+
     if (!amount) return { routes: [], poolsMap: {} };
 
     const { pools } = await this.getPoolsMetadata({
@@ -368,10 +375,9 @@ export class CLAMM {
             ],
           });
 
-          const [result] = await devInspectAndGetReturnValues(
-            this.#client,
-            txb,
-          );
+          const r = await devInspectAndGetReturnValues(this.#client, txb);
+
+          const result = r[r.length - 1];
 
           invariant(result.length, 'Result is empty');
           invariant(typeof result[0] === 'string', 'Value is not a string');
@@ -382,6 +388,9 @@ export class CLAMM {
               result.length === 2,
               'Failed to get volatile quote values',
             );
+
+          console.log(poolMetadata);
+          console.log(result);
 
           if (poolMetadata.isStable) {
             invariant(result.length === 3, 'Failed to get stable quote values');
@@ -988,6 +997,9 @@ export class CLAMM {
     minAmount = 0n,
     slippage = 2,
   }: SwapArgs): Promise<SwapReturn> {
+    coinInType = normalizeStructTag(coinInType);
+    coinOutType = normalizeStructTag(coinOutType);
+
     let pool = _pool;
 
     // lazy fetch
@@ -1165,7 +1177,9 @@ export class CLAMM {
       ],
     });
 
-    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+    const r = await devInspectAndGetReturnValues(this.#client, txb);
+
+    const result = r[r.length - 1];
 
     invariant(result.length, 'Result is empty');
     invariant(typeof result[0] === 'string', 'Value is not a string');
@@ -1228,7 +1242,9 @@ export class CLAMM {
       ],
     });
 
-    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+    const r = await devInspectAndGetReturnValues(this.#client, txb);
+
+    const result = r[r.length - 1];
 
     invariant(result.length, 'Result is empty');
     invariant(typeof result[0] === 'string', 'Invalid return type');

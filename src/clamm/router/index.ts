@@ -1,3 +1,4 @@
+import { normalizeStructTag } from '@mysten/sui.js/utils';
 import { PoolMetadata } from '../clamm.types.ts';
 import { Dex, Routes } from './router.types.ts';
 
@@ -27,6 +28,9 @@ export const findRoutes = (
   startCoin: string,
   endCoin: string,
 ): Routes => {
+  startCoin = normalizeStructTag(startCoin);
+  endCoin = normalizeStructTag(endCoin);
+
   const allPaths: [string[], string[]][] = [];
   const visited: { [key: string]: boolean } = {};
 

@@ -88,7 +88,7 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
     [] as MoveStruct[],
     ['fields', 'coins', 'fields', 'contents'],
     elem.data.content,
-  ).map(x => normalizeSuiCoinType(pathOr('', ['fields', 'name'], x)));
+  ).map(x => normalizeStructTag(pathOr('', ['fields', 'name'], x)));
   const stateVersionedId = pathOr(
     '',
     ['fields', 'state', 'fields', 'id', 'id'],
@@ -135,9 +135,11 @@ export const parseInterestPool = (elem: SuiObjectResponse) => {
 
 export const parseStableV1State = (struct: MoveStruct) => {
   const fields = path(['value', 'fields'], struct) as Record<string, any>;
-  const lpCoinType = pathOr('', ['lp_coin_supply', 'type'], fields)
-    .split('Supply<')[1]
-    .slice(0, -1);
+  const lpCoinType = normalizeStructTag(
+    pathOr('', ['lp_coin_supply', 'type'], fields)
+      .split('Supply<')[1]
+      .slice(0, -1),
+  );
 
   const state = {
     lpCoinDecimals: 9,
@@ -171,9 +173,11 @@ export const parseStableV1State = (struct: MoveStruct) => {
 
 export const parseVolatileV1State = (struct: MoveStruct) => {
   const fields = path(['value', 'fields'], struct) as Record<string, any>;
-  const lpCoinType = pathOr('', ['lp_coin_supply', 'type'], fields)
-    .split('Supply<')[1]
-    .slice(0, -1);
+  const lpCoinType = normalizeStructTag(
+    pathOr('', ['lp_coin_supply', 'type'], fields)
+      .split('Supply<')[1]
+      .slice(0, -1),
+  );
 
   const coinStates = pathOr([], ['coin_states', 'fields', 'contents'], fields);
 
@@ -234,7 +238,7 @@ export const createCoinStateMap = (struct: MoveStruct[]) =>
   struct.reduce(
     (acc: VolatilePoolState['coinStateMap'], elem: Record<string, any>) => {
       const content = path(['fields', 'value'], elem);
-      const type = normalizeSuiCoinType(
+      const type = normalizeStructTag(
         path(['fields', 'type_name', 'fields', 'name'], content) as string,
       );
 
