@@ -3,7 +3,7 @@ export const PACKAGES = {
     CLAMM: '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382',
     SUITEARS:
       '0x7ba65fa88ed4026304b7f95ee86f96f8169170efe84b56d465b4fe305e2486cb',
-    UTILS: '0xff2f1a595831846fc63daabfb59d5e7111376579ec8db852d47c26aec42c2ab9',
+    UTILS: '0x935ccb91431a0b7dade86e968ad1df02e8d7c802de217015d77070b5e31e4e13',
   },
   testnet: {
     CLAMM: '',

@@ -1559,7 +1559,7 @@ export class CLAMM {
 
     return txb.moveCall({
       target: `${pkg.UTILS}::utils::deduct_slippage`,
-      arguments: [amount, txb.pure.u64(slippage)],
+      arguments: [amount, txb.pure.u64(Math.round(slippage * 1000))],
     });
   }
 
@@ -1580,7 +1580,7 @@ export class CLAMM {
 
     return txb.moveCall({
       target: `${pkg.UTILS}::utils::deduct_slippage_from_vector`,
-      arguments: [amounts, txb.pure.u64(slippage)],
+      arguments: [amounts, txb.pure.u64(Math.round(slippage * 1000))],
     });
   }
 
