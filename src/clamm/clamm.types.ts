@@ -1,15 +1,14 @@
-import { CoinMetadata, SuiClient } from '@mysten/sui.js/client';
+import { CoinMetadata, SuiClient } from '@mysten/sui/client';
 import {
-  TransactionArgument,
-  TransactionBlock,
-  TransactionObjectArgument,
+  Transaction,
   TransactionResult,
-} from '@mysten/sui.js/transactions';
+  TransactionArgument,
+} from '@mysten/sui/transactions';
 
 import { CoinPath, PoolObjectIdPath } from './router/router.types.ts';
 
 interface MaybeTxb {
-  txb?: TransactionBlock;
+  tx?: Transaction;
 }
 
 interface MaybeSlippage {
@@ -25,12 +24,12 @@ export type CoinMeta = CoinMetadata & {
   type: string;
 };
 
-export type MoveObjectArgument = string | TransactionObjectArgument;
+export type MoveObjectArgument = string | TransactionArgument;
 
-export type TransactionNestedResult = Extract<
-  TransactionArgument,
-  { index: number; resultIndex: number; kind: 'NestedResult' }
->;
+export type TransactionNestedResult = {
+  NestedResult: [number, number];
+  $kind: 'NestedResult';
+};
 
 export interface NewStableArgs extends MaybeTxb {
   typeArguments: string[];
@@ -55,12 +54,12 @@ export interface NewVolatileArgs extends MaybeTxb {
 }
 
 export interface SharePoolArgs {
-  txb: TransactionBlock;
-  pool: TransactionNestedResult;
+  tx: Transaction;
+  pool: TransactionArgument;
 }
 
 export interface NewPoolReturn {
-  txb: TransactionBlock;
+  tx: Transaction;
   pool: TransactionNestedResult;
   poolAdmin: TransactionNestedResult;
   lpCoin: TransactionNestedResult;
@@ -73,7 +72,7 @@ export interface AddLiquidityArgs extends MaybeTxb, MaybeSlippage {
 }
 
 export interface AddLiquidityReturn {
-  txb: TransactionBlock;
+  tx: Transaction;
   lpCoin: TransactionResult;
 }
 
@@ -84,7 +83,7 @@ export interface RemoveLiquidityArgs extends MaybeTxb, MaybeSlippage {
 }
 
 export interface RemoveLiquidityReturn extends MaybeTxb {
-  txb: TransactionBlock;
+  tx: Transaction;
   coinsOut: TransactionNestedResult[];
 }
 
@@ -97,7 +96,7 @@ export interface SwapArgs extends MaybeTxb, MaybeSlippage {
 }
 
 export interface SwapReturn {
-  txb: TransactionBlock;
+  tx: Transaction;
   coinOut: TransactionResult;
 }
 
@@ -109,7 +108,7 @@ export interface RemoveLiquidityOneCoinArgs extends MaybeTxb, MaybeSlippage {
 }
 
 export interface RemoveLiquidityOneCoinReturn {
-  txb: TransactionBlock;
+  tx: Transaction;
   coinOut: TransactionResult;
 }
 
@@ -212,7 +211,7 @@ export interface HandleCoinVectorArgs extends MaybeTxb {
 }
 
 export interface HandleCoinVectorReturn {
-  txb: TransactionBlock;
+  tx: Transaction;
   coin: TransactionResult;
 }
 

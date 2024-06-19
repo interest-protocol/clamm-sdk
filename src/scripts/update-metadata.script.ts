@@ -1,9 +1,9 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import { log, executeTx } from './utils.script';
 
 (async () => {
   try {
-    const txb = new TransactionBlock();
+    const txb = new Transaction();
 
     txb.moveCall({
       target: `0x2::coin::update_name`,

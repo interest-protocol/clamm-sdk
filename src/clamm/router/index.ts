@@ -1,4 +1,4 @@
-import { normalizeStructTag } from '@mysten/sui.js/utils';
+import { normalizeStructTag } from '@mysten/sui/utils';
 import { PoolMetadata } from '../clamm.types.ts';
 import { Dex, Routes } from './router.types.ts';
 

@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 import {
   CLAMM,
@@ -13,9 +13,9 @@ import {
   try {
     const pool = await CLAMM.getPool(STABLE_POOL_USDC_USDT_OBJECT_ID);
 
-    const initTxb = new TransactionBlock();
+    const initTx = new Transaction();
 
-    const lpCoin = await getCoinOfValue(initTxb, pool.lpCoinType, 100_000_000n);
+    const lpCoin = await getCoinOfValue(initTx, pool.lpCoinType, 100_000_000n);
 
     const minAmount = await CLAMM.quoteRemoveLiquidityOneCoin({
       pool,
@@ -23,16 +23,16 @@ import {
       amount: 100_000_000n,
     });
 
-    const { txb, coinOut } = await CLAMM.removeLiquidityOneCoin({
-      txb: initTxb,
+    const { tx, coinOut } = await CLAMM.removeLiquidityOneCoin({
+      tx: initTx,
       pool,
       coinOutType: pool.coinTypes[0],
       lpCoin,
     });
 
-    txb.transferObjects([coinOut], txb.pure(keypair.toSuiAddress()));
+    tx.transferObjects([coinOut], tx.pure.address(keypair.toSuiAddress()));
 
-    const response = await executeTx(txb);
+    const response = await executeTx(tx);
     log(minAmount);
     log(response);
   } catch (e) {

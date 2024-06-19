@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 import { CLAMM, executeTx, keypair, log } from '../utils.script';
 
@@ -11,44 +11,44 @@ import { CLAMM, executeTx, keypair, log } from '../utils.script';
         '0x328ffb64d7562fbca80203bccd4f4e548edb80e0abb7bebebe05d93503b835e5::pepe::PEPE',
     });
 
-    const initTxb = new TransactionBlock();
+    const initTx = new Transaction();
 
-    const coinIn = initTxb.moveCall({
+    const coinIn = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [
         '0xc179ea5266d66726abd4ddbaa2d54cd69acef3de43734a1aeafdbf14470e0592::eth::ETH',
       ],
       arguments: [
-        initTxb.object(
+        initTx.object(
           '0xa13ad40fa947760297fc581af6886a18c19e39e0c2777e7d657e4a6161decb75',
         ),
-        initTxb.pure(100_000_000n),
+        initTx.pure.u64(100_000_000n),
       ],
     });
 
-    const { coinOut, txb } = await CLAMM.swapRoute({
-      txb: initTxb,
+    const { coinOut, tx } = await CLAMM.swapRoute({
+      tx: initTx,
       coinIn,
       route: routes[0],
       poolsMap,
       minAmount: 0n,
     });
 
-    const coinIn2 = txb.moveCall({
+    const coinIn2 = tx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [
         '0xc179ea5266d66726abd4ddbaa2d54cd69acef3de43734a1aeafdbf14470e0592::eth::ETH',
       ],
       arguments: [
-        txb.object(
+        tx.object(
           '0xa13ad40fa947760297fc581af6886a18c19e39e0c2777e7d657e4a6161decb75',
         ),
-        txb.pure(100_000_000n),
+        tx.pure.u64(100_000_000n),
       ],
     });
 
-    const { coinOut: coinOut2, txb: txb2 } = await CLAMM.swapRoute({
-      txb: txb,
+    const { coinOut: coinOut2, tx: txb2 } = await CLAMM.swapRoute({
+      tx: tx,
       coinIn: coinIn2,
       route: routes[0],
       poolsMap,
@@ -57,7 +57,7 @@ import { CLAMM, executeTx, keypair, log } from '../utils.script';
 
     txb2.transferObjects(
       [coinOut, coinOut2],
-      txb2.pure(keypair.toSuiAddress()),
+      txb2.pure.address(keypair.toSuiAddress()),
     );
 
     const response = await executeTx(txb2);

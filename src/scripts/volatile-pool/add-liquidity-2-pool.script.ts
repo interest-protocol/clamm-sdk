@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 import {
   CLAMM,
@@ -13,25 +13,25 @@ import {
   try {
     const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_ETH_OBJECT_ID);
 
-    const initTxb = new TransactionBlock();
+    const initTx = new Transaction();
 
     // USDT has 9 decimals
-    const coinA = initTxb.moveCall({
+    const coinA = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[0]],
       arguments: [
-        initTxb.object(COINS.usdc.treasuryCap),
-        initTxb.pure(3_000_000_000n),
+        initTx.object(COINS.usdc.treasuryCap),
+        initTx.pure.u64(3_000_000_000n),
       ],
     });
 
     // BTC has 9 decimals
-    const coinB = initTxb.moveCall({
+    const coinB = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[1]],
       arguments: [
-        initTxb.object(COINS.eth.treasuryCap),
-        initTxb.pure(1_000_000_000n),
+        initTx.object(COINS.eth.treasuryCap),
+        initTx.pure.u64(1_000_000_000n),
       ],
     });
 
@@ -40,16 +40,16 @@ import {
       amounts: [3_000_000_000n, 1_000_000_000n],
     });
 
-    const { lpCoin, txb } = await CLAMM.addLiquidity({
-      txb: initTxb,
+    const { lpCoin, tx } = await CLAMM.addLiquidity({
+      tx: initTx,
       pool,
       coinsIn: [coinA, coinB],
       minAmount,
     });
 
-    txb.transferObjects([lpCoin], txb.pure(keypair.toSuiAddress()));
+    tx.transferObjects([lpCoin], tx.pure.address(keypair.toSuiAddress()));
 
-    const response = await executeTx(txb);
+    const response = await executeTx(tx);
     log(minAmount);
     log(response);
   } catch (e) {

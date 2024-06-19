@@ -1,19 +1,19 @@
-import { bcs } from '@mysten/sui.js/bcs';
-import { SuiClient } from '@mysten/sui.js/client';
+import { bcs } from '@mysten/sui/bcs';
+import { SuiClient } from '@mysten/sui/client';
 import {
-  TransactionBlock,
+  Transaction,
   TransactionObjectArgument,
   TransactionResult,
-} from '@mysten/sui.js/transactions';
+} from '@mysten/sui/transactions';
 import {
   isValidSuiObjectId,
   normalizeStructTag,
   normalizeSuiObjectId,
   SUI_CLOCK_OBJECT_ID,
-} from '@mysten/sui.js/utils';
+} from '@mysten/sui/utils';
 import { isEmpty } from 'ramda';
 import invariant from 'tiny-invariant';
-
+import { devInspectAndGetResults } from '@polymedia/suitcase-core';
 import {
   AddLiquidityArgs,
   AddLiquidityReturn,
@@ -57,7 +57,6 @@ import {
 } from './constants';
 import { constructDex, findRoutes } from './router';
 import {
-  devInspectAndGetReturnValues,
   getCoinMetas,
   listToString,
   parseInterestPool,
@@ -87,7 +86,7 @@ export class CLAMM {
   #network: ClammConstructor['network'];
   #mainnetClammAddress =
     '0x429dbf2fc849c0b4146db09af38c104ae7a3ed746baf835fa57fee27fa5ff382';
-  #END_POINT = 'https://www.suicoins.com/api/';
+  #END_POINT = 'https://www.suicoins.com/api/v1/';
   #poolType: string;
   stableType: string;
   volatileType: string;
@@ -345,7 +344,7 @@ export class CLAMM {
     if (!routes.length) return { routes: [], poolsMap: {} };
 
     for (const [coinsPath, idsPath] of routes) {
-      const txb = new TransactionBlock();
+      const tx = new Transaction();
 
       let amountIn: bigint | TransactionObjectArgument | any = amount;
 
@@ -361,7 +360,7 @@ export class CLAMM {
           : this.#volatileModule;
 
         if (isLastCall || (isFirstCall && isLastCall)) {
-          txb.moveCall({
+          tx.moveCall({
             target: `${this.#package}::${moduleName}::quote_swap`,
             typeArguments: [
               coinsPath[index],
@@ -369,49 +368,39 @@ export class CLAMM {
               poolMetadata.lpCoinType,
             ],
             arguments: [
-              txb.object(poolId),
-              txb.object(SUI_CLOCK_OBJECT_ID),
-              isFirstCall ? txb.pure.u64(amountIn.toString()) : amountIn,
+              tx.object(poolId),
+              tx.object(SUI_CLOCK_OBJECT_ID),
+              isFirstCall ? tx.pure.u64(amountIn.toString()) : amountIn,
             ],
           });
 
-          const r = await devInspectAndGetReturnValues(this.#client, txb);
+          const result = await devInspectAndGetResults(this.#client, tx);
 
-          const result = r[r.length - 1];
+          invariant(
+            result.length && !!result[result.length - 1]?.returnValues?.length,
+            'Result is empty',
+          );
 
-          invariant(result.length, 'Result is empty');
-          invariant(typeof result[0] === 'string', 'Value is not a string');
-          invariant(typeof result[1] === 'string', 'Value is not a string');
-
-          if (!poolMetadata.isStable)
-            invariant(
-              result.length === 2,
-              'Failed to get volatile quote values',
-            );
-
-          console.log(poolMetadata);
-          console.log(result);
-
-          if (poolMetadata.isStable) {
-            invariant(result.length === 3, 'Failed to get stable quote values');
-            invariant(typeof result[2] === 'string', 'Value is not a string');
-          }
+          const data = result[result.length - 1].returnValues?.map(elem => {
+            const [x] = elem;
+            return bcs.U64.parse(new Uint8Array(x));
+          })!;
 
           const output = poolMetadata.isStable
             ? {
-                amount: BigInt(result[0]),
-                feeIn: BigInt(result[1]),
-                feeOut: BigInt(result[2] as string),
+                amount: BigInt(data[0]),
+                feeIn: BigInt(data[1]),
+                feeOut: BigInt(data[2]),
               }
             : {
-                amount: BigInt(result[0]),
-                fee: BigInt(result[1]),
+                amount: BigInt(data[0]),
+                fee: BigInt(data[1]),
               };
           routeQuote.push([coinsPath, idsPath, output]);
           break;
         }
 
-        [amountIn] = txb.moveCall({
+        [amountIn] = tx.moveCall({
           target: `${this.#package}::${moduleName}::quote_swap`,
           typeArguments: [
             coinsPath[index],
@@ -419,9 +408,9 @@ export class CLAMM {
             poolMetadata.lpCoinType,
           ],
           arguments: [
-            txb.object(poolId),
-            txb.object(SUI_CLOCK_OBJECT_ID),
-            isFirstCall ? txb.pure.u64(amountIn.toString()) : amountIn,
+            tx.object(poolId),
+            tx.object(SUI_CLOCK_OBJECT_ID),
+            isFirstCall ? tx.pure.u64(amountIn.toString()) : amountIn,
           ],
         });
       }
@@ -434,7 +423,7 @@ export class CLAMM {
    * @note Executes a swap route by moving coins through multiple pools.
    *
    * @param {SwapRouteArgs} args - The arguments to swap using the `args.route` information.
-   * @param {TransactionBlock} args.txb - The TransactionBlock instance.
+   * @param {TransactionBlock} args.tx - The TransactionBlock instance.
    * @param {string | TransactionObjectArgument} args.coinIn - The input coin for the swap. This is the coin object with the exact value you wish to sell. Merge and split before this call.
    * @param {Record<string, PoolMetadata>} args.poolsMap - A map of pool metadata for the router.
    * @param {[CoinPath, PoolObjectIdPath, QuoteSwapReturn][]} args.route - The swap route, represented as an array of two elements: coinsPath and idsPath.
@@ -442,7 +431,7 @@ export class CLAMM {
    * @returns The TransactionBlock instance and the output coin of the swap.
    */
   swapRoute({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     coinIn,
     poolsMap,
     route,
@@ -458,7 +447,7 @@ export class CLAMM {
 
     let min = undefined;
     if (minAmount) {
-      min = txb.pure.u64(minAmount.toString());
+      min = tx.pure.u64(minAmount.toString());
     } else {
       for (const poolId of idsPath) {
         const index = idsPath.indexOf(poolId);
@@ -469,7 +458,7 @@ export class CLAMM {
           ? this.#stableModule
           : this.#volatileModule;
 
-        [min] = txb.moveCall({
+        [min] = tx.moveCall({
           target: `${this.#package}::${moduleName}::quote_swap`,
           typeArguments: [
             coinsPath[index],
@@ -477,12 +466,12 @@ export class CLAMM {
             poolMetadata.lpCoinType,
           ],
           arguments: [
-            txb.object(poolId),
-            txb.object(SUI_CLOCK_OBJECT_ID),
-            min ? min : this.#coinValue(txb, coinIn, coinsPath[index]),
+            tx.object(poolId),
+            tx.object(SUI_CLOCK_OBJECT_ID),
+            min ? min : this.#coinValue(tx, coinIn, coinsPath[index]),
           ],
         });
-        min = this.#deductSlippage(txb, min, slippage);
+        min = this.#deductSlippage(tx, min, slippage);
       }
     }
 
@@ -498,7 +487,7 @@ export class CLAMM {
         ? this.#stableModule
         : this.#volatileModule;
 
-      input = txb.moveCall({
+      input = tx.moveCall({
         target: `${this.#package}::${moduleName}::swap`,
         typeArguments: [
           coinsPath[index],
@@ -506,16 +495,16 @@ export class CLAMM {
           poolMetadata.lpCoinType,
         ],
         arguments: [
-          txb.object(poolId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
-          this.#object(txb, input),
-          isLastCall ? min! : txb.pure.u64('0'),
+          tx.object(poolId),
+          tx.object(SUI_CLOCK_OBJECT_ID),
+          this.#object(tx, input),
+          isLastCall ? min! : tx.pure.u64('0'),
         ],
       });
     }
 
     return {
-      txb,
+      tx,
       coinOut: input as SwapReturn['coinOut'],
     };
   }
@@ -524,34 +513,34 @@ export class CLAMM {
    * @note Shares a stable pool.
    *
    * @param {SharePoolArgs} args - The arguments for sharing the pool.
-   * @param {TransactionBuilder} args.txb - A transaction block.
+   * @param {TransactionBuilder} args.tx - A transaction block.
    * @param {NestedResult} args.pool - The pool to share.
    * @returns {TransactionBuilder} The updated transaction block.
    */
-  shareStablePool({ txb, pool }: SharePoolArgs) {
-    txb.moveCall({
+  shareStablePool({ tx, pool }: SharePoolArgs) {
+    tx.moveCall({
       target: `${this.#package}::${this.#poolModule}::share`,
       typeArguments: [this.stableType],
       arguments: [pool],
     });
-    return txb;
+    return tx;
   }
 
   /**
    * Shares a volatile pool.
    *
    * @param {SharePoolArgs} args - The arguments for sharing the pool.
-   * @param {TransactionBuilder} args.txb - The transaction block.
+   * @param {TransactionBuilder} args.tx - The transaction block.
    * @param {NestedResult} args.pool - The pool to share.
    * @returns {TransactionBuilder} The updated transaction block.
    */
-  shareVolatilePool({ txb, pool }: SharePoolArgs) {
-    txb.moveCall({
+  shareVolatilePool({ tx, pool }: SharePoolArgs) {
+    tx.moveCall({
       target: `${this.#package}::${this.#poolModule}::share`,
       typeArguments: [this.volatileType],
       arguments: [pool],
     });
-    return txb;
+    return tx;
   }
 
   /**
@@ -566,7 +555,7 @@ export class CLAMM {
    * @returns A promise that resolves to an object containing the new pool, pool admin, LP coin, and the updated transaction block.
    */
   async newStable({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     a = this.#stableA,
     lpCoinTreasuryCap,
     coins,
@@ -582,35 +571,35 @@ export class CLAMM {
     );
 
     const supply = this.#treasuryIntoSupply(
-      txb,
+      tx,
       typeArguments.slice(-1)[0],
       lpCoinTreasuryCap,
     );
 
     const [coinDecimals, cap] = await this.#handleCoinDecimals(
-      txb,
+      tx,
       typeArguments,
     );
 
-    const [pool, poolAdmin, lpCoin] = txb.moveCall({
+    const [pool, poolAdmin, lpCoin] = tx.moveCall({
       target: `${this.#package}::${this.#stableModule}::${NEW_POOL_FUNCTION_NAME_MAP[typeArguments.length]}`,
       typeArguments,
       arguments: [
-        txb.object(SUI_CLOCK_OBJECT_ID),
+        tx.object(SUI_CLOCK_OBJECT_ID),
         coinDecimals,
-        ...coins.map(x => this.#object(txb, x)),
+        ...coins.map(x => this.#object(tx, x)),
         supply,
-        txb.pure.u256(a.toString()),
+        tx.pure.u256(a.toString()),
       ],
     });
 
-    txb = this.#destroyCoinDecimalsAndCap(txb, coinDecimals, cap);
+    tx = this.#destroyCoinDecimalsAndCap(tx, coinDecimals, cap);
 
     return {
       pool,
       poolAdmin,
       lpCoin,
-      txb,
+      tx,
     };
   }
 
@@ -619,7 +608,7 @@ export class CLAMM {
    * @dev Only set the pool parameter values if you know what you are doing.
    *
    * @param {NewVolatileArgs} args - The arguments to create a volatile pool.
-   * @param {TransactionBlock} args.txb - The transaction block.
+   * @param {TransactionBlock} args.tx - The transaction block.
    * @param {string[] | TransactionObjectArgument[]} args.coins - A list of coins. These coins must have the value you wish to add and must be in the correct order.
    * @param {string[]} args.typeArguments - The type arguments. It is a list of of the coinTypes with the same order as args.coins. It should have an additional type for the LpCoin [...coinTypes[], lpCoinType]
    * @param {String | TransactionObjectArgument} args.lpCoinTreasuryCap - The LP coin treasury cap.
@@ -635,7 +624,7 @@ export class CLAMM {
    * @returns A promise that resolves to an object containing the pool, pool admin, LP coin, and the updated transaction block.
    */
   async newVolatile({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     coins,
     typeArguments,
     lpCoinTreasuryCap,
@@ -684,42 +673,49 @@ export class CLAMM {
     );
 
     const supply = this.#treasuryIntoSupply(
-      txb,
+      tx,
       typeArguments.slice(-1)[0],
       lpCoinTreasuryCap,
     );
 
     const [coinDecimals, cap] = await this.#handleCoinDecimals(
-      txb,
+      tx,
       typeArguments,
     );
 
-    const [pool, poolAdmin, lpCoin] = txb.moveCall({
+    const [pool, poolAdmin, lpCoin] = tx.moveCall({
       target: `${this.#package}::${this.#volatileModule}::${NEW_POOL_FUNCTION_NAME_MAP[typeArguments.length]}`,
       typeArguments,
       arguments: [
-        txb.object(SUI_CLOCK_OBJECT_ID),
+        tx.object(SUI_CLOCK_OBJECT_ID),
         coinDecimals,
-        ...coins.map(x => this.#object(txb, x)),
+        ...coins.map(x => this.#object(tx, x)),
         supply,
-        txb.pure(listToString([a, gamma])),
-        txb.pure(listToString([extraProfit, adjustmentStep, maHalfTime])),
-        txb.pure(
-          typeArguments.length === 3
-            ? prices[0].toString()
-            : listToString(prices),
+        tx.pure(bcs.vector(bcs.u64()).serialize(listToString([a, gamma]))),
+        tx.pure(
+          bcs
+            .vector(bcs.u64())
+            .serialize(listToString([extraProfit, adjustmentStep, maHalfTime])),
         ),
-        txb.pure(listToString([midFee, outFee, gammaFee])),
+
+        typeArguments.length === 3
+          ? tx.pure.u64(prices[0].toString())
+          : bcs.vector(bcs.u64()).serialize(listToString(prices)),
+        tx.pure(
+          bcs
+            .vector(bcs.u64())
+            .serialize(listToString([midFee, outFee, gammaFee])),
+        ),
       ],
     });
 
-    txb = this.#destroyCoinDecimalsAndCap(txb, coinDecimals, cap);
+    tx = this.#destroyCoinDecimalsAndCap(tx, coinDecimals, cap);
 
     return {
       pool,
       poolAdmin,
       lpCoin,
-      txb,
+      tx,
     };
   }
 
@@ -834,7 +830,7 @@ export class CLAMM {
    * @returns A promise that resolves to the transaction block and the LP coin.
    */
   async addLiquidity({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     pool: _pool,
     coinsIn,
     minAmount = 0n,
@@ -859,48 +855,48 @@ export class CLAMM {
     let min = undefined;
 
     if (minAmount) {
-      min = txb.pure.u64(minAmount.toString());
+      min = tx.pure.u64(minAmount.toString());
     } else {
-      const minAmounts = txb.moveCall({
+      const minAmounts = tx.moveCall({
         target: '0x1::vector::empty',
         typeArguments: [bcs.U64.name],
       });
 
       pool.coinTypes.forEach((coinType, index) => {
-        const value = this.#coinValue(txb, coinsIn[index], coinType);
-        txb.moveCall({
+        const value = this.#coinValue(tx, coinsIn[index], coinType);
+        tx.moveCall({
           target: '0x1::vector::push_back',
           typeArguments: [bcs.U64.name],
           arguments: [minAmounts, value],
         });
       });
 
-      min = txb.moveCall({
+      min = tx.moveCall({
         target: `${this.#package}::${moduleName}::quote_add_liquidity`,
         typeArguments: [pool.lpCoinType],
         arguments: [
-          txb.object(pool.poolObjectId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
+          tx.object(pool.poolObjectId),
+          tx.object(SUI_CLOCK_OBJECT_ID),
           minAmounts,
         ],
       });
 
-      min = this.#deductSlippage(txb, min, slippage);
+      min = this.#deductSlippage(tx, min, slippage);
     }
 
-    const lpCoin = txb.moveCall({
+    const lpCoin = tx.moveCall({
       target: `${this.#package}::${moduleName}::${ADD_LIQUIDITY_FUNCTION_NAME_MAP[pool.coinTypes.length]}`,
       typeArguments: [...pool.coinTypes, pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        ...coinsIn.map(x => this.#object(txb, x)),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        ...coinsIn.map(x => this.#object(tx, x)),
         min,
       ],
     });
 
     return {
-      txb,
+      tx,
       lpCoin,
     };
   }
@@ -909,7 +905,7 @@ export class CLAMM {
    * @note Removes liquidity from a pool.
    *
    * @param {RemoveLiquidityArgs} args - The args for removing liquidity.
-   * @param {TransactionBlock} args.txb - The transaction block to use for the operation.
+   * @param {TransactionBlock} args.tx - The transaction block to use for the operation.
    * @param {string | Pool} args.pool - The pool to remove liquidity from. Can be either the pool ID or the pool object.
    * @param {string} args.lpCoin - The LP coin to remove (should be splitted before).
    * @param {string[]} args.minAmounts - The minimum amounts of each coin to receive after removing liquidity. You must
@@ -917,7 +913,7 @@ export class CLAMM {
    * @returns {Promise<RemoveLiquidityReturn>} A promise that resolves to the result of the remove liquidity operation.
    */
   async removeLiquidity({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     pool: _pool,
     lpCoin,
     minAmounts: _minAmounts,
@@ -938,37 +934,37 @@ export class CLAMM {
     let min = undefined;
 
     if (minAmounts && minAmounts.length === pool.coinTypes.length) {
-      min = txb.pure(listToString(minAmounts));
+      min = tx.pure(bcs.vector(bcs.u64()).serialize(listToString(minAmounts)));
     } else {
-      const value = this.#coinValue(txb, lpCoin, pool.lpCoinType);
+      const value = this.#coinValue(tx, lpCoin, pool.lpCoinType);
 
-      min = txb.moveCall({
+      min = tx.moveCall({
         target: `${this.#package}::${moduleName}::quote_remove_liquidity`,
         typeArguments: [pool.lpCoinType],
-        arguments: [txb.object(pool.poolObjectId), value],
+        arguments: [tx.object(pool.poolObjectId), value],
       });
-      min = this.#deductSlippageFromVector(txb, min, slippage);
+      min = this.#deductSlippageFromVector(tx, min, slippage);
     }
 
     const numOfCoins = pool.coinTypes.length;
 
     const args = pool.isStable
       ? [
-          txb.object(pool.poolObjectId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
-          this.#object(txb, lpCoin),
+          tx.object(pool.poolObjectId),
+          tx.object(SUI_CLOCK_OBJECT_ID),
+          this.#object(tx, lpCoin),
           min,
         ]
-      : [txb.object(pool.poolObjectId), this.#object(txb, lpCoin), min];
+      : [tx.object(pool.poolObjectId), this.#object(tx, lpCoin), min];
 
-    const result = txb.moveCall({
+    const result = tx.moveCall({
       target: `${this.#package}::${moduleName}::${REMOVE_LIQUIDITY_FUNCTION_NAME_MAP[numOfCoins]}`,
       typeArguments: [...pool.coinTypes, pool.lpCoinType],
       arguments: args,
     });
 
     return {
-      txb,
+      tx,
       coinsOut: Array(numOfCoins)
         .fill(0)
         .map((_, index) => result[index]),
@@ -979,7 +975,7 @@ export class CLAMM {
    * @note Swaps one type of coin for another in a pool.
    *
    * @param {SwapArgs} args - The swap args.
-   * @param {TransactionBlock} args.txb - The transaction block to use for the swap.
+   * @param {TransactionBlock} args.tx - The transaction block to use for the swap.
    * @param {string | InterestPool} args.pool - The pool to perform the swap in. Can be either an {InterestPool} or the object id.
    * @param {string | TransactionObjectArgument} args.coinIn - The input coin to swap (should be splitted before).
    * @param {string} args.coinInType - The type of the input coin.
@@ -989,7 +985,7 @@ export class CLAMM {
    * @returns {Promise<SwapReturn>} A promise that resolves to the swap result, including the transaction block and the output coin.
    */
   async swap({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     pool: _pool,
     coinIn,
     coinInType,
@@ -1023,33 +1019,33 @@ export class CLAMM {
 
     let min = undefined;
     if (minAmount) {
-      min = txb.pure.u64(minAmount.toString());
+      min = tx.pure.u64(minAmount.toString());
     } else {
-      [min] = txb.moveCall({
+      [min] = tx.moveCall({
         target: `${this.#package}::${moduleName}::quote_swap`,
         typeArguments: [coinInType, coinOutType, pool.lpCoinType],
         arguments: [
-          txb.object(pool.poolObjectId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
-          this.#coinValue(txb, coinIn, coinInType),
+          tx.object(pool.poolObjectId),
+          tx.object(SUI_CLOCK_OBJECT_ID),
+          this.#coinValue(tx, coinIn, coinInType),
         ],
       });
-      min = this.#deductSlippage(txb, min, slippage);
+      min = this.#deductSlippage(tx, min, slippage);
     }
 
-    const coinOut = txb.moveCall({
+    const coinOut = tx.moveCall({
       target: `${this.#package}::${moduleName}::swap`,
       typeArguments: [coinInType, coinOutType, pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        this.#object(txb, coinIn),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        this.#object(tx, coinIn),
         min,
       ],
     });
 
     return {
-      txb,
+      tx,
       coinOut,
     };
   }
@@ -1066,7 +1062,7 @@ export class CLAMM {
    * @returns {Promise<RemoveLiquidityOneCoinReturn>} A promise that resolves to the result of the remove liquidity operation.
    */
   async removeLiquidityOneCoin({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     pool: _pool,
     lpCoin,
     coinOutType,
@@ -1091,34 +1087,34 @@ export class CLAMM {
 
     let min = undefined;
     if (minAmount) {
-      min = txb.pure.u64(minAmount.toString());
+      min = tx.pure.u64(minAmount.toString());
     } else {
-      min = txb.moveCall({
+      min = tx.moveCall({
         target: `${this.#package}::${moduleName}::quote_remove_liquidity_one_coin`,
         typeArguments: [coinOutType, pool.lpCoinType],
         arguments: [
-          txb.object(pool.poolObjectId),
-          txb.object(SUI_CLOCK_OBJECT_ID),
-          this.#coinValue(txb, lpCoin, pool.lpCoinType),
+          tx.object(pool.poolObjectId),
+          tx.object(SUI_CLOCK_OBJECT_ID),
+          this.#coinValue(tx, lpCoin, pool.lpCoinType),
         ],
       });
 
-      min = this.#deductSlippage(txb, min, slippage);
+      min = this.#deductSlippage(tx, min, slippage);
     }
 
-    const coinOut = txb.moveCall({
+    const coinOut = tx.moveCall({
       target: `${this.#package}::${moduleName}::remove_liquidity_one_coin`,
       typeArguments: [coinOutType, pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        this.#object(txb, lpCoin),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        this.#object(tx, lpCoin),
         min,
       ],
     });
 
     return {
-      txb,
+      tx,
       coinOut,
     };
   }
@@ -1161,47 +1157,55 @@ export class CLAMM {
         ? { amount: 0n, feeIn: 0n, feeOut: 0n }
         : { amount: 0n, fee: 0n };
 
-    const txb = new TransactionBlock();
+    const tx = new Transaction();
 
     const moduleName = pool.isStable
       ? this.#stableModule
       : this.#volatileModule;
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#package}::${moduleName}::quote_swap`,
       typeArguments: [coinInType, coinOutType, pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        txb.pure.u64(amount.toString()),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        tx.pure.u64(amount.toString()),
       ],
     });
 
-    const r = await devInspectAndGetReturnValues(this.#client, txb);
+    const result = await devInspectAndGetResults(this.#client, tx);
 
-    const result = r[r.length - 1];
+    invariant(
+      result.length && !!result[result.length - 1]?.returnValues?.length,
+      'Result is empty',
+    );
 
-    invariant(result.length, 'Result is empty');
-    invariant(typeof result[0] === 'string', 'Value is not a string');
-    invariant(typeof result[1] === 'string', 'Value is not a string');
+    const data = result[result.length - 1].returnValues?.map(elem => {
+      const [x] = elem;
+      return bcs.U64.parse(new Uint8Array(x));
+    })!;
+
+    invariant(data.length, 'Result is empty');
+    invariant(typeof data[0] === 'string', 'Value is not a string');
+    invariant(typeof data[1] === 'string', 'Value is not a string');
 
     if (!pool.isStable)
-      invariant(result.length === 2, 'Failed to get volatile quote values');
+      invariant(data.length === 2, 'Failed to get volatile quote values');
 
     if (pool.isStable) {
-      invariant(result.length === 3, 'Failed to get stable quote values');
-      invariant(typeof result[2] === 'string', 'Value is not a string');
+      invariant(data.length === 3, 'Failed to get stable quote values');
+      invariant(typeof data[2] === 'string', 'Value is not a string');
     }
 
     return pool.isStable
       ? {
-          amount: BigInt(result[0]),
-          feeIn: BigInt(result[1]),
-          feeOut: BigInt(result[2] as string),
+          amount: BigInt(data[0]),
+          feeIn: BigInt(data[1]),
+          feeOut: BigInt(data[2] as string),
         }
       : {
-          amount: BigInt(result[0]),
-          fee: BigInt(result[1]),
+          amount: BigInt(data[0]),
+          fee: BigInt(data[1]),
         };
   }
 
@@ -1226,30 +1230,38 @@ export class CLAMM {
       pool = await this.getPool(pool);
     }
 
-    const txb = new TransactionBlock();
+    const tx = new Transaction();
 
     const moduleName = pool.isStable
       ? this.#stableModule
       : this.#volatileModule;
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#package}::${moduleName}::quote_add_liquidity`,
       typeArguments: [pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        txb.pure(listToString(amounts)),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        tx.pure(bcs.vector(bcs.u64()).serialize(listToString(amounts))),
       ],
     });
 
-    const r = await devInspectAndGetReturnValues(this.#client, txb);
+    const result = await devInspectAndGetResults(this.#client, tx);
 
-    const result = r[r.length - 1];
+    invariant(
+      result.length && !!result[result.length - 1]?.returnValues?.length,
+      'Result is empty',
+    );
 
-    invariant(result.length, 'Result is empty');
-    invariant(typeof result[0] === 'string', 'Invalid return type');
+    const data = result[result.length - 1].returnValues?.map(elem => {
+      const [x] = elem;
+      return bcs.U64.parse(new Uint8Array(x));
+    })!;
 
-    return BigInt(result[0]);
+    invariant(data.length, 'Result is empty');
+    invariant(typeof data[0] === 'string', 'Invalid return type');
+
+    return BigInt(data[0]);
   }
 
   /**
@@ -1273,27 +1285,34 @@ export class CLAMM {
 
     if (!amount) return pool.coinTypes.map(() => 0n);
 
-    const txb = new TransactionBlock();
+    const tx = new Transaction();
 
     const moduleName = pool.isStable
       ? this.#stableModule
       : this.#volatileModule;
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#package}::${moduleName}::quote_remove_liquidity`,
       typeArguments: [pool.lpCoinType],
-      arguments: [
-        txb.object(pool.poolObjectId),
-        txb.pure.u64(amount.toString()),
-      ],
+      arguments: [tx.object(pool.poolObjectId), tx.pure.u64(amount.toString())],
     });
 
-    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+    const result = await devInspectAndGetResults(this.#client, tx);
 
-    invariant(result.length, 'Result is empty');
-    invariant(Array.isArray(result[0]), 'Value is not an array');
+    invariant(
+      result.length && !!result[result.length - 1]?.returnValues?.length,
+      'Result is empty',
+    );
 
-    return result[0].map(x => BigInt(x));
+    const data = result[result.length - 1].returnValues?.map(elem => {
+      const [x] = elem;
+      return bcs.vector(bcs.U64).parse(new Uint8Array(x));
+    })!;
+
+    invariant(data.length, 'Result is empty');
+    invariant(Array.isArray(data[0]), 'Value is not an array');
+
+    return data[0].map(x => BigInt(x));
   }
 
   /**
@@ -1324,32 +1343,39 @@ export class CLAMM {
       'The pool does not support this coin out type',
     );
 
-    const txb = new TransactionBlock();
+    const tx = new Transaction();
 
     const moduleName = pool.isStable
       ? this.#stableModule
       : this.#volatileModule;
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#package}::${moduleName}::quote_remove_liquidity_one_coin`,
       typeArguments: [coinOutType, pool.lpCoinType],
       arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-        txb.pure.u64(amount.toString()),
+        tx.object(pool.poolObjectId),
+        tx.object(SUI_CLOCK_OBJECT_ID),
+        tx.pure.u64(amount.toString()),
       ],
     });
 
-    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+    const result = await devInspectAndGetResults(this.#client, tx);
 
-    invariant(result.length, 'Result is empty');
-    invariant(typeof result[0] === 'string', 'Invalid value');
+    invariant(
+      result.length && !!result[result.length - 1]?.returnValues?.length,
+      'Result is empty',
+    );
 
-    return BigInt(result[0]);
+    const data = result[result.length - 1].returnValues?.map(elem => {
+      const [x] = elem;
+      return bcs.U64.parse(new Uint8Array(x));
+    })!;
+
+    return BigInt(data[0]);
   }
 
   async getStablePoolVirtualPrice(id: string | InterestPool) {
-    const txb = new TransactionBlock();
+    const tx = new Transaction();
 
     let pool = id;
 
@@ -1358,21 +1384,28 @@ export class CLAMM {
       pool = await this.getPool(pool);
     }
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#package}::${this.#stableModule}::virtual_price`,
       typeArguments: [pool.lpCoinType],
-      arguments: [
-        txb.object(pool.poolObjectId),
-        txb.object(SUI_CLOCK_OBJECT_ID),
-      ],
+      arguments: [tx.object(pool.poolObjectId), tx.object(SUI_CLOCK_OBJECT_ID)],
     });
 
-    const [result] = await devInspectAndGetReturnValues(this.#client, txb);
+    const result = await devInspectAndGetResults(this.#client, tx);
 
-    invariant(result.length, 'Result is empty');
-    invariant(typeof result[0] === 'string', 'Invalid value');
+    invariant(
+      result.length && !!result[result.length - 1]?.returnValues?.length,
+      'Result is empty',
+    );
 
-    return BigInt(result[0]);
+    const data = result[result.length - 1].returnValues?.map(elem => {
+      const [x] = elem;
+      return bcs.U64.parse(new Uint8Array(x));
+    })!;
+
+    invariant(data.length, 'Result is empty');
+    invariant(typeof data[0] === 'string', 'Invalid value');
+
+    return BigInt(data[0]);
   }
 
   /**
@@ -1385,7 +1418,7 @@ export class CLAMM {
    * @returns {Promise<bigint>} - The result of merging and then splitting a coin.
    */
   handleCoinVector({
-    txb = new TransactionBlock(),
+    tx = new Transaction(),
     coins,
     coinType,
     value,
@@ -1394,24 +1427,24 @@ export class CLAMM {
 
     invariant(pkg, 'utils package not found');
 
-    const result = txb.moveCall({
+    const result = tx.moveCall({
       target: `${pkg.UTILS}::utils::handle_coin_vector`,
       typeArguments: [coinType],
       arguments: [
-        txb.makeMoveVec({
-          objects: coins.map(x => this.#object(txb, x)),
+        tx.makeMoveVec({
+          elements: coins.map(x => this.#object(tx, x)),
         }),
-        txb.pure.u64(value),
+        tx.pure.u64(value),
       ],
     });
 
     return {
-      txb,
+      tx,
       coin: result,
     };
   }
 
-  async #handleCoinDecimals(txb: TransactionBlock, typeArguments: string[]) {
+  async #handleCoinDecimals(txb: Transaction, typeArguments: string[]) {
     const cap = txb.moveCall({
       target: `${this.#suiTears}::coin_decimals::new_cap`,
     });
@@ -1458,45 +1491,45 @@ export class CLAMM {
   }
 
   #treasuryIntoSupply(
-    txb: TransactionBlock,
+    tx: Transaction,
     type: string,
     lpCoinTreasuryCap: string | TransactionObjectArgument,
   ) {
-    return txb.moveCall({
+    return tx.moveCall({
       target: '0x2::coin::treasury_into_supply',
       typeArguments: [type],
-      arguments: [this.#object(txb, lpCoinTreasuryCap)],
+      arguments: [this.#object(tx, lpCoinTreasuryCap)],
     });
   }
 
   #destroyCoinDecimalsAndCap(
-    txb: TransactionBlock,
+    tx: Transaction,
     coinDecimals: TransactionObjectArgument,
     cap: TransactionObjectArgument,
   ) {
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#suiTears}::coin_decimals::destroy`,
       arguments: [coinDecimals, cap],
     });
 
-    txb.moveCall({
+    tx.moveCall({
       target: `${this.#suiTears}::owner::destroy`,
       typeArguments: [`${this.#suiTears}::coin_decimals::CoinDecimalsWitness`],
       arguments: [cap],
     });
 
-    return txb;
+    return tx;
   }
 
   #coinValue(
-    txb: TransactionBlock,
+    tx: Transaction,
     coinIn: string | TransactionObjectArgument,
     coinType: string,
   ) {
-    return txb.moveCall({
+    return tx.moveCall({
       target: '0x2::coin::value',
       typeArguments: [coinType],
-      arguments: [this.#object(txb, coinIn)],
+      arguments: [this.#object(tx, coinIn)],
     });
   }
 
@@ -1543,7 +1576,7 @@ export class CLAMM {
   }
 
   #deductSlippage(
-    txb: TransactionBlock,
+    tx: Transaction,
     amount: any,
     slippage: number,
   ): TransactionResult {
@@ -1557,14 +1590,14 @@ export class CLAMM {
 
     invariant(pkg, 'utils package not found');
 
-    return txb.moveCall({
+    return tx.moveCall({
       target: `${pkg.UTILS}::utils::deduct_slippage`,
-      arguments: [amount, txb.pure.u64(Math.round(slippage * 1000))],
+      arguments: [amount, tx.pure.u64(Math.round(slippage * 1000))],
     });
   }
 
   #deductSlippageFromVector(
-    txb: TransactionBlock,
+    txb: Transaction,
     amounts: any,
     slippage: number,
   ): TransactionResult {
@@ -1584,7 +1617,7 @@ export class CLAMM {
     });
   }
 
-  #object(txb: TransactionBlock, id: string | TransactionObjectArgument) {
+  #object(txb: Transaction, id: string | TransactionObjectArgument) {
     return typeof id === 'string' ? txb.object(id) : id;
   }
 }

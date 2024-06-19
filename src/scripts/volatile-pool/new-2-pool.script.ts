@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import invariant from 'tiny-invariant';
 
 import {
@@ -31,30 +31,30 @@ import {
 
     await sleep(3000);
 
-    const initTxb = new TransactionBlock();
+    const initTx = new Transaction();
 
     // USDC has 6 decimals
-    const coinUSDC = initTxb.moveCall({
+    const coinUSDC = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [COINS.usdc.coinType],
       arguments: [
-        initTxb.object(COINS.usdc.treasuryCap),
-        initTxb.pure(1_000_000_000_000n),
+        initTx.object(COINS.usdc.treasuryCap),
+        initTx.pure.u64(1_000_000_000_000n),
       ],
     });
 
     // ETH has 9 decimals
-    const coinETH = initTxb.moveCall({
+    const coinETH = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [COINS.eth.coinType],
       arguments: [
-        initTxb.object(COINS.eth.treasuryCap),
-        initTxb.pure(333_000_000_000n),
+        initTx.object(COINS.eth.treasuryCap),
+        initTx.pure.u64(333_000_000_000n),
       ],
     });
 
-    let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newVolatile({
-      txb: initTxb,
+    let { pool, poolAdmin, lpCoin, tx } = await CLAMM.newVolatile({
+      tx: initTx,
       coins: [coinUSDC, coinETH],
       lpCoinTreasuryCap: lpCoinData.treasuryCap,
       typeArguments: [
@@ -65,11 +65,14 @@ import {
       prices: [3_000n * PRECISION],
     });
 
-    txb.transferObjects([poolAdmin, lpCoin], txb.pure(keypair.toSuiAddress()));
+    tx.transferObjects(
+      [poolAdmin, lpCoin],
+      tx.pure.address(keypair.toSuiAddress()),
+    );
 
-    txb = CLAMM.shareVolatilePool({ txb, pool });
+    tx = CLAMM.shareVolatilePool({ tx, pool });
 
-    const result = await executeTx(txb);
+    const result = await executeTx(tx);
 
     log(result);
   } catch (e) {

@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 import {
   CLAMM,
@@ -13,13 +13,13 @@ import {
   try {
     const pool = await CLAMM.getPool(VOLATILE_POOL_USDC_ETH_OBJECT_ID);
 
-    const initTxb = new TransactionBlock();
-    const coinIn = initTxb.moveCall({
+    const initTx = new Transaction();
+    const coinIn = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [pool.coinTypes[0]],
       arguments: [
-        initTxb.object(COINS.usdc.treasuryCap),
-        initTxb.pure(100_000_000n),
+        initTx.object(COINS.usdc.treasuryCap),
+        initTx.pure.u64(100_000_000n),
       ],
     });
 
@@ -30,8 +30,8 @@ import {
       amount: 100_000_000n,
     });
 
-    const { coinOut, txb } = await CLAMM.swap({
-      txb: initTxb,
+    const { coinOut, tx } = await CLAMM.swap({
+      tx: initTx,
       pool,
       coinIn,
       coinInType: pool.coinTypes[0],
@@ -39,9 +39,9 @@ import {
       minAmount: 0n,
     });
 
-    txb.transferObjects([coinOut], txb.pure(keypair.toSuiAddress()));
+    tx.transferObjects([coinOut], tx.pure.address(keypair.toSuiAddress()));
 
-    const response = await executeTx(txb);
+    const response = await executeTx(tx);
     log(minAmount);
     log(response);
   } catch (e) {

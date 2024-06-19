@@ -1,4 +1,4 @@
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import invariant from 'tiny-invariant';
 
 import {
@@ -30,30 +30,30 @@ import {
       'LpCoin Cap not found',
     );
 
-    const initTxb = new TransactionBlock();
+    const initTx = new Transaction();
 
     // USDC has 6 decimals
-    const coinUSDC = initTxb.moveCall({
+    const coinUSDC = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [COINS.usdc.coinType],
       arguments: [
-        initTxb.object(COINS.usdc.treasuryCap),
-        initTxb.pure(1_000_000_000_000n),
+        initTx.object(COINS.usdc.treasuryCap),
+        initTx.pure.u64(1_000_000_000_000n),
       ],
     });
 
     // USDT has 9 decimals
-    const coinUSDT = initTxb.moveCall({
+    const coinUSDT = initTx.moveCall({
       target: '0x2::coin::mint',
       typeArguments: [COINS.usdt.coinType],
       arguments: [
-        initTxb.object(COINS.usdt.treasuryCap),
-        initTxb.pure(1_000_000_000_000_000n),
+        initTx.object(COINS.usdt.treasuryCap),
+        initTx.pure.u64(1_000_000_000_000_000n),
       ],
     });
 
-    let { pool, poolAdmin, lpCoin, txb } = await CLAMM.newStable({
-      txb: initTxb,
+    let { pool, poolAdmin, lpCoin, tx } = await CLAMM.newStable({
+      tx: initTx,
       coins: [coinUSDC, coinUSDT],
       lpCoinTreasuryCap: lpCoinData.treasuryCap,
       typeArguments: [
@@ -63,11 +63,14 @@ import {
       ],
     });
 
-    txb.transferObjects([poolAdmin, lpCoin], txb.pure(keypair.toSuiAddress()));
+    tx.transferObjects(
+      [poolAdmin, lpCoin],
+      tx.pure.address(keypair.toSuiAddress()),
+    );
 
-    txb = CLAMM.shareStablePool({ txb, pool });
+    tx = CLAMM.shareStablePool({ tx, pool });
 
-    const result = await executeTx(txb);
+    const result = await executeTx(tx);
 
     log(result);
   } catch (e) {

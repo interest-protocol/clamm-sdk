@@ -1,23 +1,20 @@
-import { bcs } from '@mysten/sui.js/bcs';
+import { bcs } from '@mysten/sui/bcs';
 import {
   getFullnodeUrl,
   SuiClient,
   SuiObjectResponse,
-} from '@mysten/sui.js/client';
-import { OwnedObjectRef } from '@mysten/sui.js/client';
-import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
-import {
-  TransactionBlock,
-  TransactionResult,
-} from '@mysten/sui.js/transactions';
-import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui.js/utils';
+} from '@mysten/sui/client';
+import { OwnedObjectRef } from '@mysten/sui/client';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { Transaction, TransactionResult } from '@mysten/sui/transactions';
+import { fromHEX, normalizeSuiAddress, toHEX } from '@mysten/sui/utils';
 import dotenv from 'dotenv';
 import { pathOr } from 'ramda';
 import invariant from 'tiny-invariant';
 import util from 'util';
 
 import { CLAMM as CLAMM_ } from '../clamm';
-import * as template from './template/move_bytecode_template.js';
+import * as template from '@interest-protocol/move-bytecode-template';
 
 dotenv.config();
 
@@ -159,10 +156,10 @@ const getLpCoinBytecode = (info: GetByteCodeArgs) => {
   return updated;
 };
 
-export const executeTx = async (txb: TransactionBlock) => {
-  const result = await client.signAndExecuteTransactionBlock({
+export const executeTx = async (tx: Transaction) => {
+  const result = await client.signAndExecuteTransaction({
     signer: keypair,
-    transactionBlock: txb,
+    transaction: tx,
     options: {
       showEffects: true,
     },
@@ -235,7 +232,8 @@ const extractCoinData = (x: SuiObjectResponse[]) =>
   );
 
 export const createCoin = async (info: GetByteCodeArgs) => {
-  const txb = new TransactionBlock();
+  await template.start();
+  const txb = new Transaction();
 
   txb.setGasBudget(50_000_000);
 
@@ -244,14 +242,14 @@ export const createCoin = async (info: GetByteCodeArgs) => {
     dependencies: [normalizeSuiAddress('0x1'), normalizeSuiAddress('0x2')],
   });
 
-  txb.transferObjects([upgradeCap], txb.pure(keypair.toSuiAddress()));
+  txb.transferObjects([upgradeCap], txb.pure.address(keypair.toSuiAddress()));
 
   const result = await executeTx(txb);
   return extractCoinData(result || []);
 };
 
 export const createLPCoin = async (info: GetByteCodeArgs) => {
-  const txb = new TransactionBlock();
+  const txb = new Transaction();
   txb.setGasBudget(50_000_000);
 
   const [upgradeCap] = txb.publish({
@@ -259,7 +257,7 @@ export const createLPCoin = async (info: GetByteCodeArgs) => {
     dependencies: [normalizeSuiAddress('0x1'), normalizeSuiAddress('0x2')],
   });
 
-  txb.transferObjects([upgradeCap], txb.pure(keypair.toSuiAddress()));
+  txb.transferObjects([upgradeCap], txb.pure.u64(keypair.toSuiAddress()));
 
   const result = await executeTx(txb);
   return extractCoinData(result || []);
@@ -314,14 +312,14 @@ export function removeLeadingZeros(address: string): string {
 }
 
 export async function getCoinOfValue(
-  txb: TransactionBlock,
+  tx: Transaction,
   coinType: string,
   coinValue: bigint,
 ): Promise<TransactionResult> {
   let coinOfValue: TransactionResult;
   coinType = removeLeadingZeros(coinType);
   if (coinType === '0x2::sui::SUI') {
-    coinOfValue = txb.splitCoins(txb.gas, [txb.pure(coinValue)]);
+    coinOfValue = tx.splitCoins(tx.gas, [tx.pure.u64(coinValue)]);
   } else {
     const paginatedCoins = await client.getCoins({
       owner: keypair.toSuiAddress(),
@@ -330,15 +328,15 @@ export async function getCoinOfValue(
 
     const [firstCoin, ...otherCoins] = paginatedCoins.data;
 
-    const firstCoinInput = txb.object(firstCoin.coinObjectId);
+    const firstCoinInput = tx.object(firstCoin.coinObjectId);
 
     if (otherCoins.length > 0) {
-      txb.mergeCoins(
+      tx.mergeCoins(
         firstCoinInput,
         otherCoins.map(coin => coin.coinObjectId),
       );
     }
-    coinOfValue = txb.splitCoins(firstCoinInput, [txb.pure(coinValue)]);
+    coinOfValue = tx.splitCoins(firstCoinInput, [tx.pure.u64(coinValue)]);
   }
   return coinOfValue;
 }
